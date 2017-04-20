@@ -1,0 +1,6 @@
+[package]
+name = "civet"
+version = "0.1.0"
+authors = ["phynalle <phynalism@gmail.com>"]
+
+[dependencies]
