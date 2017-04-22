@@ -1,6 +1,6 @@
 use std::cell::Cell;
 use std::fs::File;
-use std::io::{BufReader};
+use std::io::BufReader;
 use std::io::prelude::*;
 use std::iter::Iterator;
 
@@ -29,7 +29,9 @@ fn main() {
         Ok(parsed) => run(parsed),
         Err(e) => {
             print_error(e);
-            let _ = writeln!(&mut std::io::stderr(), "usage: {} [-n] [file ...]", get_exe_name());
+            let _ = writeln!(&mut std::io::stderr(),
+                             "usage: {} [-n] [file ...]",
+                             get_exe_name());
         }
     }
 }
@@ -47,12 +49,12 @@ fn run(mut parsed: Parsed) {
             match File::open(file_name.clone()) {
                 Ok(file) => {
                     printer.print(file);
-                },
+                }
                 Err(e) => {
                     print_error(format!("{}: {}", file_name, e));
                 }
             }
-        }    
+        }
     }
 }
 
@@ -63,15 +65,14 @@ fn print_error(err: String) {
 }
 
 fn get_exe_name() -> String {
-    std::env::current_exe().ok()
+    std::env::current_exe()
+        .ok()
         .and_then(|p| p.file_name().and_then(|s| s.to_str()).map(|s| s.to_string()))
         .unwrap_or(EXECUTABLE_NAME.to_owned())
 }
 
 fn parse_options(mut flags: Vec<String>) -> Result<Parsed, String> {
-    let mut options = Options { 
-        display_number: false 
-    };
+    let mut options = Options { display_number: false };
     while !flags.is_empty() {
         {
             let first = &flags[0];
@@ -115,10 +116,10 @@ impl Printer {
     fn print_line<T: AsRef<str>>(&self, s: T) {
         let line_num = self.line_num.get() + 1;
         self.line_num.set(line_num);
-        
+
         if self.options.display_number {
             print!("{:6}\t", line_num);
-        } 
+        }
         println!("{}", s.as_ref());
     }
 
@@ -129,5 +130,5 @@ impl Printer {
         for line in reader.lines() {
             self.print_line(line.unwrap());
         }
-    } 
+    }
 }
