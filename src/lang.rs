@@ -23,12 +23,8 @@ impl Highlighter {
 
             let s = if is_colored {
                 // it would be problem when return carrage is '\r\n'
-                token.text
-                    .lines()
-                    .map(|s| format!("{}{}{}", colorize(n), s, colorize(0)))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-
+                format!("{}{}{}", colorize(n), token.text, colorize(0))
+                    .replace('\n', format!("{}\n{}", colorize(0), colorize(n)).as_str())
             } else {
                 format!("{}", token.text)
             };
