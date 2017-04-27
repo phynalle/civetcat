@@ -3,4 +3,13 @@ name = "civet"
 version = "0.1.0"
 authors = ["phynalle <phynalism@gmail.com>"]
 
+[[bin]]
+name = "cv"
+path = "src/main.rs"
+
 [dependencies]
+serde = "*"
+serde_derive = "*"
+serde_json = "1.0"
+regex = "0.2"
+pcre = "*"

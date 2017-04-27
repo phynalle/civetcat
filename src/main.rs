@@ -1,3 +1,12 @@
+#[macro_use]
+extern crate serde_derive;
+
+extern crate serde;
+extern crate serde_json;
+
+extern crate regex;
+extern crate pcre;
+
 use std::cell::Cell;
 use std::fs::File;
 use std::io::BufReader;
@@ -6,9 +15,10 @@ use std::iter::Iterator;
 
 mod lang;
 mod parser;
+mod syntax;
+
 
 use lang::Highlighter;
-
 static EXECUTABLE_NAME: &'static str = "cv";
 
 #[derive(Copy, Clone)]
@@ -22,6 +32,11 @@ struct Parsed {
 }
 
 fn main() {
+    match syntax::parse_syntax() {
+        Err(e) => println!("{:?}", e),
+        _ => (),
+    }
+
     let args: Vec<_> = std::env::args().skip(1).collect();
     let result = parse_options(args);
 
