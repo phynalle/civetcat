@@ -50,7 +50,6 @@ impl Include {
         }
     }
 
-
     // fn expression(&self, repos: &HashMap<String, Pattern>) -> String {
     //     let root = self.name();
     //     let mut current = root.clone();
@@ -113,19 +112,23 @@ impl Block {
     //     self.begin.clone()
     // }
 
-    fn match_begin<'a>(&self, mut line: &'a str) -> Option<(Vec<Token>, &'a str)> {
-        let mut tokens = Vec::new();
-
+    fn match_begin<'a>(&self, cursor: &mut TextCursor) -> Option<Vec<Token>> {
         let mut pcre = Pcre::compile(&self.begin).unwrap();
-        if let Some(m) = pcre.exec(&line) {
+        if let Some(m) = pcre.exec(cursor.text()) {
+            let pos = cursor.pos();
+
+            let mut tokens = Vec::new();
             let mut captures = Vec::new();
             if let Some(ref scope) = self.scope {
-                captures.push((m.group_start(0), m.group_end(0), scope.clone()));
+                captures.push(
+                    (pos+m.group_start(0), 
+                    pos+m.group_end(0), 
+                    scope.clone()));
             }
             if let Some(ref caps) = self.begin_captures {
                 for i in 1..m.string_count() {
                     if let Some(ref cap) = caps.get(&i.to_string()) {
-                        captures.push((m.group_start(i), m.group_end(i), cap.name.clone()));
+                        captures.push((pos+m.group_start(i), pos+m.group_end(i), cap.name.clone()));
                     }
                 }
             }
@@ -133,8 +136,8 @@ impl Block {
                 text: m.group(0).to_string(),
                 captures: captures
             });
-            line = &line[m.group_end(0)..];
-            Some((tokens, line))
+            cursor.consume(m.group_end(0));
+            Some(tokens)
         } else {
             None
         }
@@ -155,19 +158,20 @@ impl Match {
     //     self.pattern.clone()
     // }
 
-    fn tokenize<'a>(&self, mut line: &'a str) -> Option<(Vec<Token>, &'a str)> {
-        let mut tokens = Vec::new();
+    fn tokenize<'a>(&self, cursor: &mut TextCursor) -> Option<Vec<Token>> {
 
         let mut pcre = Pcre::compile(&self.pattern).unwrap();
-        if let Some(m) = pcre.exec(&line) {
+        if let Some(m) = pcre.exec(cursor.text()) {
+            let mut tokens = Vec::new();
+            let pos = cursor.pos();
             let mut captures = Vec::new();
             if let Some(ref scope) = self.scope {
-                captures.push((m.group_start(0), m.group_end(0), scope.clone()));
+                captures.push((pos+m.group_start(0), pos+m.group_end(0), scope.clone()));
             }
             if let Some(ref caps) = self.captures {
                 for i in 1..m.string_count() {
                     if let Some(ref cap) = caps.get(&i.to_string()) {
-                        captures.push((m.group_start(i), m.group_end(i), cap.name.clone()));
+                        captures.push((pos+m.group_start(i), pos+m.group_end(i), cap.name.clone()));
                     }
                 }
             }
@@ -175,8 +179,8 @@ impl Match {
                 text: m.group(0).to_string(),
                 captures: captures
             });
-            line = &line[m.group_end(0)..];
-            Some((tokens, line))
+            cursor.consume(m.group_end(0));
+            Some(tokens)
         } else {
             None
         }
@@ -225,6 +229,40 @@ impl Syntax {
 
 }
 
+struct TextCursor<'a> {
+    text: &'a str,
+    pos: usize,
+}
+
+impl<'a> TextCursor<'a> {
+    fn new(text: &'a str) -> TextCursor<'a> {
+        TextCursor {
+            text: text,
+            pos: 0
+        }
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.text.len()
+    }
+
+    #[inline]
+    fn pos(&self) -> usize {
+        self.pos
+    }
+    
+    fn consume(&mut self, n: usize) {
+        self.pos += n;
+    }
+
+    fn text(&self) -> &'a str {
+        &self.text[self.pos..].lines().nth(1).unwrap_or(&self.text[self.pos..])
+
+
+    }
+}
+
 struct Tokenizer<'a> {
     root: &'a Pattern,
     stack: Stack<'a>,
@@ -237,16 +275,32 @@ impl<'a> Tokenizer<'a> {
 
         // let mut stack = Stack::new(&root);
         for line in text.lines() {
-            let mut line = line;
-            while !line.is_empty() {
-                let result = self.tokenize_line(&line);
+            let pos = line.as_ptr() as usize - text.as_ptr() as usize;
+
+            let mut cursor = TextCursor {text: line, pos: 0};
+            while !cursor.text().is_empty() {
+                let mut result = self.tokenize_line(&mut cursor);
                 if result.is_none() {
                     break;
                 }
-                let (x, remaining) = result.unwrap();
-                tokens.extend_from_slice(&x);
-                line = remaining;
+                if let Some(toks) = result {
+                    
+                    tokens.extend(toks.into_iter()
+                        .map(|tok| {
+                            let captures = tok.captures.into_iter()
+                                    .map(|(begin, end, scope)| {
+                                        (pos+begin, pos+end, scope)
+                                    })
+                                    .collect();
+                            Token {
+                                text: tok.text,
+                                captures: captures
+                            }
+                        }));
+                }
+                
             }
+
         }
 
         for token in &tokens {
@@ -288,17 +342,17 @@ Root
     pop
 
 */
-    fn tokenize2<'b>(&mut self, patterns: &'a Vec<Pattern>, line: &'b str) -> Option<(Vec<Token>, &'b str)> {
+    fn tokenize2<'b>(&mut self, patterns: &'a Vec<Pattern>, mut cursor: &mut TextCursor) -> Option<Vec<Token>> {
         for pat in patterns {
             let pat = pat.refer(self.repository());
             if let &Pattern::Match(ref p) = pat {
-                let result = p.tokenize(line); 
+                let result = p.tokenize(&mut cursor); 
                 if result.is_none() {
                     continue;
                 }
                 return result;
             } else if let &Pattern::Block(ref p) = pat {
-                let result = p.match_begin(line);
+                let result = p.match_begin(&mut cursor);
                 if result.is_none() {
                     continue;
                 }
@@ -310,37 +364,37 @@ Root
         None
     }
 
-    fn tokenize_line<'b>(&mut self, mut line: &'b str) -> Option<(Vec<Token>, &'b str)> {
+    fn tokenize_line<'b>(&mut self, mut cursor: &mut TextCursor) -> Option<Vec<Token>> {
         match *self.stack.top() {
             Pattern::Block(ref r) => {
                 let mut tokens = Vec::new();
 
                 if let Some(ref pats) = r.patterns {
-                   let result = self.tokenize2(&pats, line); 
-                   if let Some((ref v, ref text)) = result {
-                       tokens.extend_from_slice(&v);
-                       line = text;
+                   let result = self.tokenize2(&pats, &mut cursor); 
+                   if let Some(ref toks) = result {
+                       tokens.extend_from_slice(&toks);
                    }
                 }
 
-                if let Some(m) = Pcre::compile(&r.end).unwrap().exec(&line) {
+                if let Some(m) = Pcre::compile(&r.end).unwrap().exec(cursor.text()) {
+                    let pos = cursor.pos();
                     println!("End: {}~{}", r.begin, r.end);
                     if let Some(scope) = self.stack.top_scope() {
                         let token = Token {
                             text: m.group(0).to_string(),
-                            captures: vec![(m.group_start(0), m.group_end(0), scope)]
+                            captures: vec![(pos+m.group_start(0), pos+m.group_end(0), scope)]
                         };
                         tokens.push(token);
-                        line = &line[m.group_end(0)..];
+                        cursor.consume(m.group_end(0));
                     }
                     self.stack.pop();
                 }
                 if !tokens.is_empty() {
-                    return Some((tokens, line));
+                    return Some(tokens)
                 }
             }
             Pattern::Root(ref r) => {
-                return self.tokenize2(&r.patterns, line);
+                return self.tokenize2(&r.patterns, &mut cursor);
             }
             _ => panic!("Unreachable!")
         };
@@ -451,5 +505,3 @@ impl<'a> Stack<'a> {
         }
     }
 }
-
-
