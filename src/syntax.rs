@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use pcre::Pcre;
 use serde_json;
 
-
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
 enum Pattern {
@@ -226,31 +225,6 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-/*
-Line 1. 
-One of pattern in root is selected.
-
-the most matched pattern is Match
-    make token
-    repeat next remaining str
-
-the most matched pattern is Block
-    Push into stack
-        repeat
-    if End pattern is matched
-    Pop stack
-
-the most Include
-    Go to pattern
-    repeat
-
-Root 
-    push into stack
-        iterator lines 
-            match line
-    pop
-
-*/
     fn tokenize2<'b>(&mut self, patterns: &'a Vec<Pattern>, mut cursor: &mut TextCursor) -> Option<Vec<Token>> {
         for pat in patterns {
             let pat = pat.refer(self.repository());
@@ -355,7 +329,7 @@ fn load_text() -> String {
 
 pub fn parse_syntax() -> Result<()> {
     let file = File::open("syntaxes/rust.tmLanguage.json")?;
-    let syntax: Syntax = serde_json::from_reader(file)?;
+    let syntax: Syntax = serde_json::from_reader(file).unwrap();
 
     let text = load_text();
     let root = Pattern::Root(syntax.clone());

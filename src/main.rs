@@ -16,7 +16,7 @@ use std::iter::Iterator;
 mod lang;
 mod parser;
 mod syntax;
-
+mod colorizer;
 
 use lang::Highlighter;
 static EXECUTABLE_NAME: &'static str = "cv";
@@ -32,7 +32,12 @@ struct Parsed {
 }
 
 fn main() {
-    match syntax::parse_syntax() {
+    // match syntax::parse_syntax() {
+    //     Err(e) => println!("{:?}", e),
+    //     _ => (),
+    // }
+
+    match colorizer::theme_test() {
         Err(e) => println!("{:?}", e),
         _ => (),
     }
