@@ -47,12 +47,13 @@ impl Include {
                     if target == root {
                         panic!("Cycle Error");
                     }
-                    current = target;             
+                    current = target;
                 }
-                Pattern::Match(_) | Pattern::Block(_) => {
+                Pattern::Match(_) |
+                Pattern::Block(_) => {
                     return &pattern;
                 }
-                _ => panic!("Unreachable")
+                _ => panic!("Unreachable"),
             }
         }
     }
@@ -70,7 +71,7 @@ struct Block {
 }
 
 impl Block {
-     fn match_begin<'a>(&self, cursor: &mut TextCursor) -> Option<Vec<Token>> {
+    fn match_begin<'a>(&self, cursor: &mut TextCursor) -> Option<Vec<Token>> {
         let mut pcre = Pcre::compile(&self.begin).unwrap();
         if let Some(m) = pcre.exec(cursor.text()) {
             let pos = cursor.orig_pos;
@@ -78,10 +79,7 @@ impl Block {
             let mut tokens = Vec::new();
             let mut captures = Vec::new();
             if let Some(ref scope) = self.scope {
-                captures.push(
-                    (pos+m.group_start(0), 
-                    pos+m.group_end(0), 
-                    scope.clone()));
+                captures.push((pos + m.group_start(0), pos + m.group_end(0), scope.clone()));
             }
             if let Some(ref caps) = self.begin_captures {
                 for i in 1..m.string_count() {
@@ -92,7 +90,7 @@ impl Block {
             }
             tokens.push(Token {
                 text: m.group(0).to_string(),
-                captures: captures
+                captures: captures,
             });
             cursor.consume(m.group_end(0));
             Some(tokens)
@@ -119,7 +117,7 @@ impl Match {
             let pos = cursor.orig_pos;
             let mut captures = Vec::new();
             if let Some(ref scope) = self.scope {
-                captures.push((pos+m.group_start(0), pos+m.group_end(0), scope.clone()));
+                captures.push((pos + m.group_start(0), pos + m.group_end(0), scope.clone()));
             }
             if let Some(ref caps) = self.captures {
                 for i in 1..m.string_count() {
@@ -130,7 +128,7 @@ impl Match {
             }
             tokens.push(Token {
                 text: m.group(0).to_string(),
-                captures: captures
+                captures: captures,
             });
             cursor.consume(m.group_end(0));
             Some(tokens)
@@ -154,7 +152,7 @@ struct Syntax {
 
 #[derive(Deserialize, Debug, Clone)]
 struct Capture {
-    name: String
+    name: String,
 }
 
 type Captures = Option<HashMap<String, Capture>>;
@@ -164,7 +162,7 @@ struct TextCursor<'a> {
     pos: usize,
 
     orig: &'a str,
-    orig_pos: usize
+    orig_pos: usize,
 }
 
 impl<'a> TextCursor<'a> {
@@ -172,7 +170,7 @@ impl<'a> TextCursor<'a> {
     fn pos(&self) -> usize {
         self.pos
     }
-    
+
     fn consume(&mut self, n: usize) {
         self.pos += n;
         self.orig_pos += n;
@@ -199,19 +197,19 @@ impl<'a> Tokenizer<'a> {
             let len = line.len();
 
             let mut cursor = TextCursor {
-                text: line, 
-                pos: 0, 
+                text: line,
+                pos: 0,
                 orig: text,
-                orig_pos: pos
+                orig_pos: pos,
             };
-            
+
             while cursor.pos < len {
                 let result = self.tokenize_line(&mut cursor);
                 if result.is_none() {
                     break;
                 }
                 if let Some(toks) = result {
-                    tokens.extend_from_slice(&toks); 
+                    tokens.extend_from_slice(&toks);
                 }
             }
         }
@@ -225,11 +223,14 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize2<'b>(&mut self, patterns: &'a Vec<Pattern>, mut cursor: &mut TextCursor) -> Option<Vec<Token>> {
+    fn tokenize2<'b>(&mut self,
+                     patterns: &'a Vec<Pattern>,
+                     mut cursor: &mut TextCursor)
+                     -> Option<Vec<Token>> {
         for pat in patterns {
             let pat = pat.refer(self.repository());
             if let &Pattern::Match(ref p) = pat {
-                let result = p.tokenize(&mut cursor); 
+                let result = p.tokenize(&mut cursor);
                 if result.is_none() {
                     continue;
                 }
@@ -249,25 +250,24 @@ impl<'a> Tokenizer<'a> {
     fn tokenize_line<'b>(&mut self, mut cursor: &mut TextCursor) -> Option<Vec<Token>> {
         match *self.stack.top().0 {
             Pattern::Block(ref r) => {
-                
+
 
                 if let Some(ref pats) = r.patterns {
-                   let result = self.tokenize2(&pats, &mut cursor); 
-                   if result.is_some() {
-                       return result;
-                   }
-                   /*
-                   if let Some(ref toks) = result {
-                       tokens.extend_from_slice(&toks);
-                   }*/
+                    let result = self.tokenize2(&pats, &mut cursor);
+                    if result.is_some() {
+                        return result;
+                    }
+                    // if let Some(ref toks) = result {
+                    // tokens.extend_from_slice(&toks);
+                    // }
                 }
 
-                
+
             }
             Pattern::Root(ref r) => {
                 return self.tokenize2(&r.patterns, &mut cursor);
             }
-            _ => panic!("Unreachable!")
+            _ => panic!("Unreachable!"),
         };
 
         if let Pattern::Block(ref r) = *self.stack.top().0 {
@@ -279,13 +279,13 @@ impl<'a> Tokenizer<'a> {
 
                     let token = Token {
                         text: String::from(&cursor.orig[pos_begin..pos_end]),
-                        captures: vec![(pos_begin, pos_end, scope)]
+                        captures: vec![(pos_begin, pos_end, scope)],
                     };
                     tokens.push(token);
                     cursor.consume(m.group_end(0));
                 }
                 self.stack.pop();
-                return Some(tokens)
+                return Some(tokens);
             }
         }
         None
@@ -294,8 +294,8 @@ impl<'a> Tokenizer<'a> {
 
 #[derive(Clone, Debug)]
 struct Token {
-   text: String,
-   captures: Vec<(usize, usize, String)>
+    text: String,
+    captures: Vec<(usize, usize, String)>,
 }
 
 // struct Repository {
@@ -305,14 +305,14 @@ struct Token {
 // impl Repository {
 //     fn new(base: &HashMap<String, Pattern>) {
 //         for (name, pattern) in base {
-            
+
 //         }
 
 //     }
 // }
 
 // struct Ruler {
-//     repos: HashMap<String, CompiledPattern>, // name, pattern 
+//     repos: HashMap<String, CompiledPattern>, // name, pattern
 // }
 
 // #[derive(Debug)]
@@ -333,34 +333,37 @@ pub fn parse_syntax() -> Result<()> {
 
     let text = load_text();
     let root = Pattern::Root(syntax.clone());
-    let mut tokenizer = Tokenizer { root: &root, stack: Stack::new() };
+    let mut tokenizer = Tokenizer {
+        root: &root,
+        stack: Stack::new(),
+    };
     tokenizer.tokenize(&text);
-    
+
     // root.tokenize(&text);
-    /*
-    for pattern in &de.patterns {
-        println!("pattern: {:?}", pattern);
-    }
-    for (k, v) in &de.repository {
-        println!("{}: {:?}", k, v);
-    }*/
-    /*
-    let mut builder = regex::RegexSetBuilder::new(&[
-        r"\w+",
-        r"\d+",
-        r"\pL+",
-        r"foo",
-        r"bar",
-        r"barfoo",
-        r"foobar",
-    ]);
-    builder.multi_line(true);
+    //
+    // for pattern in &de.patterns {
+    // println!("pattern: {:?}", pattern);
+    // }
+    // for (k, v) in &de.repository {
+    // println!("{}: {:?}", k, v);
+    // }
+
+    // let mut builder = regex::RegexSetBuilder::new(&[
+    // r"\w+",
+    // r"\d+",
+    // r"\pL+",
+    // r"foo",
+    // r"bar",
+    // r"barfoo",
+    // r"foobar",
+    // ]);
+    // builder.multi_line(true);
     // builder.ignore_whitespace(true);
-    builder.unicode(true);
-    let set = builder.build().unwrap();
-    let matches: Vec<_> = set.matches("   foobar23").into_iter().collect();
-    println!("{:?}", matches);
-*/
+    // builder.unicode(true);
+    // let set = builder.build().unwrap();
+    // let matches: Vec<_> = set.matches("   foobar23").into_iter().collect();
+    // println!("{:?}", matches);
+    //
 
     Ok(())
 }
@@ -371,9 +374,7 @@ struct Stack<'a> {
 
 impl<'a> Stack<'a> {
     fn new() -> Stack<'a> {
-        Stack {
-            scopes: vec![],
-        }
+        Stack { scopes: vec![] }
     }
 
     fn push(&mut self, pat: &'a Pattern, pos: usize) {

@@ -14,7 +14,6 @@ struct Theme {
     semantic_class: String,
     color_space_name: String,
     settings: Vec<Scope>,
-
 }
 
 #[derive(Deserialize, Debug)]
@@ -30,7 +29,7 @@ struct Scope {
 struct Settings {
     foreground: Option<String>,
     background: Option<String>,
-    font_style: Option<String>
+    font_style: Option<String>,
 }
 
 impl Settings {
@@ -38,20 +37,18 @@ impl Settings {
         Settings {
             foreground: None,
             background: None,
-            font_style: None
+            font_style: None,
         }
     }
 }
 
 struct Tree {
-    root: Node
+    root: Node,
 }
 
 impl Tree {
     fn new() -> Tree {
-        Tree {
-            root: Node::new(Settings::empty())
-        }
+        Tree { root: Node::new(Settings::empty()) }
     }
 
     fn insert(&mut self, key: &str, value: Settings) {
@@ -85,12 +82,14 @@ impl Node {
             if let Some(node) = self.children.get(keys[0]) {
                 node.borrow_mut().value = value;
                 return;
-            } 
+            }
             self.children.insert(keys[0].to_string(), RefCell::new(Node::new(value)));
 
         } else {
-           let node = self.children.entry(keys[0].to_string()).or_insert(RefCell::new(Node::new(Settings::empty()))); 
-           (*node).borrow_mut().insert(&keys[1..], value);
+            let node = self.children
+                .entry(keys[0].to_string())
+                .or_insert(RefCell::new(Node::new(Settings::empty())));
+            (*node).borrow_mut().insert(&keys[1..], value);
         }
     }
 
@@ -99,7 +98,7 @@ impl Node {
         let blank: String = repeat("..".to_string()).take(depth).collect();
         for (key, node) in &self.children {
             println!("{}{} -> {:?}", blank, key, node.borrow().value.foreground);
-            node.borrow().print_debug(depth+1);            
+            node.borrow().print_debug(depth + 1);
         }
     }
 }
@@ -121,12 +120,12 @@ pub fn theme_test() -> Result<()> {
             .split(",")
             .map(|s| s.trim())
             .collect();
-        
+
         for name in scope_names {
             tree.insert(&name, scope.settings.clone());
         }
     }
     tree.print_debug();
 
-    Ok(())   
+    Ok(())
 }

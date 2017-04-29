@@ -20,7 +20,7 @@ impl Highlighter {
                 TokenType::Comment => (true, 32),
                 _ => (false, 0),
             };
-            
+
             let s = if is_colored {
                 // it would be problem when return carrage is '\r\n'
                 format!("{}{}{}", colorize(n), token.text, colorize(0))
