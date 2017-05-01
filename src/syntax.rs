@@ -60,6 +60,7 @@ impl Include {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 struct Block {
     #[serde(rename = "name")]
     scope: Option<String>,
@@ -75,7 +76,6 @@ impl Block {
         let mut pcre = Pcre::compile(&self.begin).unwrap();
         if let Some(m) = pcre.exec(cursor.text()) {
             let pos = cursor.orig_pos;
-
             let mut tokens = Vec::new();
             let mut captures = Vec::new();
             if let Some(ref scope) = self.scope {
@@ -253,6 +253,17 @@ impl<'a> RegexTokenizer<'a> {
                      patterns: &'a Vec<Pattern>,
                      mut cursor: &mut TextCursor)
                      -> Option<Vec<Token>> {
+        /*let (blk, mat): (Vec<_>, Vec<_>) = patterns
+            .iter()
+            .partition(|pat| {
+                let pat = pat.refer(self.repository());
+                if let &Pattern::Block(ref p) = pat {
+                    true
+                } else {
+                    false
+                }
+            });*/
+
         for pat in patterns {
             let pat = pat.refer(self.repository());
             if let &Pattern::Match(ref p) = pat {
@@ -274,7 +285,7 @@ impl<'a> RegexTokenizer<'a> {
     }
 
     fn tokenize_line<'b>(&mut self, mut cursor: &mut TextCursor) -> Option<Vec<Token>> {
-        match *self.stack.top().0 {
+        match *self.stack.top().pattern {
             Pattern::Block(ref r) => {
 
 
@@ -283,12 +294,7 @@ impl<'a> RegexTokenizer<'a> {
                     if result.is_some() {
                         return result;
                     }
-                    // if let Some(ref toks) = result {
-                    // tokens.extend_from_slice(&toks);
-                    // }
                 }
-
-
             }
             Pattern::Root(ref r) => {
                 return self.tokenize2(&r.patterns, &mut cursor);
@@ -296,17 +302,18 @@ impl<'a> RegexTokenizer<'a> {
             _ => panic!("Unreachable!"),
         };
 
-        if let Pattern::Block(ref r) = *self.stack.top().0 {
+        if let Pattern::Block(ref r) = *self.stack.top().pattern {
             let mut tokens = Vec::new();
             if let Some(m) = Pcre::compile(&r.end).unwrap().exec(cursor.text()) {
                 if let Some(scope) = self.stack.top_scope() {
-                    let pos_begin = self.stack.top().1;
+                    let pos_begin = self.stack.top().pos;
                     let pos_end = cursor.orig_pos + m.group_end(0);
 
                     let token = Token {
                         text: String::from(&cursor.orig[pos_begin..pos_end]),
                         captures: vec![(pos_begin, pos_end, scope)],
                     };
+                    
                     tokens.push(token);
                     cursor.consume(m.group_end(0));
                 }
@@ -348,7 +355,7 @@ pub struct Token {
 // }
 
 struct Stack<'a> {
-    scopes: Vec<(&'a Pattern, usize)>,
+    scopes: Vec<State<'a>>,
 }
 
 impl<'a> Stack<'a> {
@@ -357,22 +364,36 @@ impl<'a> Stack<'a> {
     }
 
     fn push(&mut self, pat: &'a Pattern, pos: usize) {
-        self.scopes.push((pat, pos));
+        self.scopes.push(State::new(pat, pos));
     }
 
     fn pop(&mut self) {
         self.scopes.pop();
     }
 
-    fn top(&self) -> (&'a Pattern, usize) {
-        self.scopes[self.scopes.len() - 1]
+    fn top(&self) -> &State<'a> {
+        &self.scopes[self.scopes.len() - 1]
     }
 
     fn top_scope(&self) -> Option<String> {
-        if let (&Pattern::Block(ref r), _) = self.top() {
+        if let &Pattern::Block(ref r) = self.top().pattern {
             r.scope.clone()
         } else {
             None
+        }
+    }
+}
+
+struct State<'a> {
+    pattern: &'a Pattern,
+    pos: usize,
+ }
+
+impl<'a> State<'a> {
+    fn new(pattern: &'a Pattern, pos: usize) -> State<'a> {
+        State {
+            pattern: pattern,
+            pos: pos,
         }
     }
 }
