@@ -17,6 +17,7 @@ mod lang;
 mod parser;
 mod syntax;
 mod colorizer;
+mod pipeline;
 
 use lang::Highlighter;
 static EXECUTABLE_NAME: &'static str = "cv";
@@ -32,16 +33,6 @@ struct Parsed {
 }
 
 fn main() {
-    // match syntax::parse_syntax() {
-    //     Err(e) => println!("{:?}", e),
-    //     _ => (),
-    // }
-
-    match colorizer::theme_test() {
-        Err(e) => println!("{:?}", e),
-        _ => (),
-    }
-
     let args: Vec<_> = std::env::args().skip(1).collect();
     let result = parse_options(args);
 
@@ -65,6 +56,8 @@ fn run(mut parsed: Parsed) {
         let printer = Printer::new(parsed.options);
         if file_name == "-" {
             printer.print(std::io::stdin());
+        } else if file_name.ends_with(".rs") {
+            pipeline::do_pipeline(file_name);
         } else {
             match File::open(file_name.clone()) {
                 Ok(file) => {

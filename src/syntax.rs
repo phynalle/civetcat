@@ -1,4 +1,4 @@
-use std::io::{Result, Read};
+use std::io::Result;
 use std::fs::File;
 use std::collections::HashMap;
 
@@ -181,13 +181,41 @@ impl<'a> TextCursor<'a> {
     }
 }
 
-struct Tokenizer<'a> {
+
+pub struct Tokenizer {
+    root: Pattern,
+}
+
+impl Tokenizer {
+    pub fn create(filename: &str) -> Result<Tokenizer> {
+        let file = File::open(filename)?;
+        let syntax: Syntax = serde_json::from_reader(file).unwrap();
+        let root = Pattern::Root(syntax);
+        
+        Ok(Tokenizer {
+            root: root,
+        })
+    }
+
+    pub fn instance<'a>(&'a self) -> RegexTokenizer<'a> {
+        RegexTokenizer::new(&self.root)
+    }
+}
+
+pub struct RegexTokenizer<'a> {
     root: &'a Pattern,
     stack: Stack<'a>,
 }
 
-impl<'a> Tokenizer<'a> {
-    fn tokenize(&mut self, text: &str) {
+impl<'a> RegexTokenizer<'a> {
+    fn new(root: &'a Pattern) -> RegexTokenizer<'a> {
+        RegexTokenizer {
+            root: root,
+            stack: Stack::new(),
+        }
+    }
+
+    pub fn tokenize(&mut self, text: &str) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
         self.stack.push(&self.root, 0);
 
@@ -213,6 +241,7 @@ impl<'a> Tokenizer<'a> {
                 }
             }
         }
+        tokens
     }
 
     fn repository(&self) -> &'a HashMap<String, Pattern> {
@@ -293,9 +322,9 @@ impl<'a> Tokenizer<'a> {
 }
 
 #[derive(Clone, Debug)]
-struct Token {
+pub struct Token {
     text: String,
-    captures: Vec<(usize, usize, String)>,
+    pub captures: Vec<(usize, usize, String)>,
 }
 
 // struct Repository {
@@ -320,53 +349,6 @@ struct Token {
 //     names: Vec<Pattern>,
 //     re: RegexSet,
 // }
-
-fn load_text() -> String {
-    let mut buf = String::new();
-    let _ = File::open("src/syntax.rs").unwrap().read_to_string(&mut buf);
-    buf
-}
-
-pub fn parse_syntax() -> Result<()> {
-    let file = File::open("syntaxes/rust.tmLanguage.json")?;
-    let syntax: Syntax = serde_json::from_reader(file).unwrap();
-
-    let text = load_text();
-    let root = Pattern::Root(syntax.clone());
-    let mut tokenizer = Tokenizer {
-        root: &root,
-        stack: Stack::new(),
-    };
-    tokenizer.tokenize(&text);
-
-    // root.tokenize(&text);
-    //
-    // for pattern in &de.patterns {
-    // println!("pattern: {:?}", pattern);
-    // }
-    // for (k, v) in &de.repository {
-    // println!("{}: {:?}", k, v);
-    // }
-
-    // let mut builder = regex::RegexSetBuilder::new(&[
-    // r"\w+",
-    // r"\d+",
-    // r"\pL+",
-    // r"foo",
-    // r"bar",
-    // r"barfoo",
-    // r"foobar",
-    // ]);
-    // builder.multi_line(true);
-    // builder.ignore_whitespace(true);
-    // builder.unicode(true);
-    // let set = builder.build().unwrap();
-    // let matches: Vec<_> = set.matches("   foobar23").into_iter().collect();
-    // println!("{:?}", matches);
-    //
-
-    Ok(())
-}
 
 struct Stack<'a> {
     scopes: Vec<(&'a Pattern, usize)>,
