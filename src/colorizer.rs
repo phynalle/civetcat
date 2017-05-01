@@ -41,23 +41,27 @@ impl Settings {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.foreground.is_none() &&
-        self.background.is_none() &&
-        self.font_style.is_none()
+        self.foreground.is_none() && self.background.is_none() && self.font_style.is_none()
     }
 
     pub fn color(&self) -> String {
         if self.is_empty() {
             return Settings::reset();
         }
-        
+
         let mut appended = false;
         let mut s: String = "\x1B[".to_owned();
         if let Some(ref style) = self.font_style {
             appended = match style.to_lowercase().as_ref() {
-                "bold" => { s.push('1'); true }
-                "italic" => { s.push('4'); true }
-                _ => false
+                "bold" => {
+                    s.push('1');
+                    true
+                }
+                "italic" => {
+                    s.push('4');
+                    true
+                }
+                _ => false,
             };
         }
         if let Some(fg) = self.foreground {
@@ -106,7 +110,7 @@ impl ScopeTree {
                 .split(",")
                 .map(|s| s.trim())
                 .collect();
-            
+
             for name in scope_names {
                 tree.insert(&name, scope.settings.clone());
             }
@@ -199,7 +203,7 @@ fn load_theme() -> Result<ScopeTree> {
             .split(",")
             .map(|s| s.trim())
             .collect();
-        
+
         for name in scope_names {
             tree.insert(&name, scope.settings.clone());
         }
@@ -221,13 +225,13 @@ impl<'a> TextColorizer<'a> {
             offset: 0,
         }
     }
-    
+
     pub fn process(tokens: &'a Vec<(usize, usize, Settings)>) -> Vec<(usize, String)> {
         let mut tc = TextColorizer::new();
         tc.apply(tokens);
         tc.take()
     }
-    
+
     fn top(&self) -> Option<&'a (usize, usize, Settings)> {
         if self.stack.is_empty() {
             None
@@ -235,7 +239,7 @@ impl<'a> TextColorizer<'a> {
             Some(self.stack[self.stack.len() - 1])
         }
     }
-    
+
     fn push(&mut self, p: &'a (usize, usize, Settings)) {
         let s = p.2.color();
         let incr = s.len();
@@ -244,12 +248,12 @@ impl<'a> TextColorizer<'a> {
         self.order.push((p.0 + self.offset, s));
         self.offset += incr;
     }
-    
+
     fn is_empty(&self) -> bool {
         self.stack.is_empty()
     }
-    
-    fn pop_until<F>(&mut self, f: F) 
+
+    fn pop_until<F>(&mut self, f: F)
         where F: Fn(&'a (usize, usize, Settings)) -> bool
     {
         while !self.is_empty() {
@@ -263,26 +267,26 @@ impl<'a> TextColorizer<'a> {
             } else {
                 self.top().unwrap().2.color()
             };
-            
+
             let incr = code.len();
             self.order.push((top.1 + self.offset, code));
             self.offset += incr;
         }
     }
-    
+
     fn apply(&mut self, pairs: &'a Vec<(usize, usize, Settings)>) {
         for p in pairs {
             if self.is_empty() {
                 self.push(p);
                 continue;
             }
-            
+
             let top = self.top().unwrap();
             if top.0 <= p.0 && p.1 <= top.1 {
                 self.push(p);
                 continue;
-            } 
-            self.pop_until(|top| top.1 <= p.0 );
+            }
+            self.pop_until(|top| top.1 <= p.0);
             self.push(p);
         }
         self.pop_until(|_| false);
@@ -292,4 +296,3 @@ impl<'a> TextColorizer<'a> {
         self.order
     }
 }
-

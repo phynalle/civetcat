@@ -26,16 +26,17 @@ pub fn do_pipeline(filename: &str) {
         let tokens = toker.tokenize(&line);
         let mut v: Vec<_> = tokens.into_iter()
             .map(|t| {
-                t.captures.iter()
-                    .map(|&(begin, end, ref name)| (begin, end, scope.get(&name)) )
-                    .filter(|&(_, _, ref s)| s.is_some() && !s.as_ref().unwrap().is_empty() )
+                t.captures
+                    .iter()
+                    .map(|&(begin, end, ref name)| (begin, end, scope.get(&name)))
+                    .filter(|&(_, _, ref s)| s.is_some() && !s.as_ref().unwrap().is_empty())
                     .map(|(begin, end, s)| (begin, end, s.unwrap()))
                     .collect::<Vec<_>>()
             })
             .filter(|ref v| !v.is_empty())
             .flat_map(|v| v.into_iter())
             .collect();
-        v.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)) );
+        v.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
 
         let mut s: String = line.to_owned();
         for p in TextColorizer::process(&v) {

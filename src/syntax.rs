@@ -191,10 +191,8 @@ impl Tokenizer {
         let file = File::open(filename)?;
         let syntax: Syntax = serde_json::from_reader(file).unwrap();
         let root = Pattern::Root(syntax);
-        
-        Ok(Tokenizer {
-            root: root,
-        })
+
+        Ok(Tokenizer { root: root })
     }
 
     pub fn instance<'a>(&'a self) -> RegexTokenizer<'a> {

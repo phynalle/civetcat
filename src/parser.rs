@@ -194,4 +194,3 @@ impl<'a> Tokenizer<'a, SimpleTokenizer<'a>> for SimpleTokenizer<'a> {
         self.parse_next()
     }
 }
-
