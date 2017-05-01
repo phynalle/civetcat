@@ -217,7 +217,6 @@ impl<'a> RegexTokenizer<'a> {
         let mut tokens: Vec<Token> = Vec::new();
         self.stack.push(&self.root, 0);
 
-        // let mut stack = Stack::new(&root);
         for line in text.lines() {
             let pos = line.as_ptr() as usize - text.as_ptr() as usize;
             let len = line.len();

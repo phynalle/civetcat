@@ -44,6 +44,22 @@ impl Settings {
         self.foreground.is_none() && self.background.is_none() && self.font_style.is_none()
     }
 
+     pub fn from(&self, other: Option<Settings>) -> Settings {
+        let mut new = self.clone();
+        if let Some(set) = other {
+            if new.foreground.is_none() {
+                new.foreground = set.foreground.clone();
+            }
+            if new.background.is_none() {
+                new.background = set.background.clone();
+            }
+            if new.font_style.is_none() {
+                new.font_style = set.font_style.clone();
+            }
+        }
+        new
+    }
+
     pub fn color(&self) -> String {
         if self.is_empty() {
             return Settings::reset();
@@ -170,7 +186,12 @@ impl Node {
             Some(self.value.clone())
         } else {
             if let Some(node) = self.children.get(keys[0]) {
-                node.get(&keys[1..])
+                let v = node.get(&keys[1..]);
+                if v.is_none() || v.as_ref().unwrap().is_empty() {
+                    Some(self.value.clone())
+                } else {
+                    v
+                }
             } else {
                 Some(self.value.clone())
             }
@@ -289,7 +310,7 @@ impl<'a> TextColorizer<'a> {
             self.pop_until(|top| top.1 <= p.0);
             self.push(p);
         }
-        self.pop_until(|_| false);
+        self.pop_until(|_| true);
     }
 
     fn take(self) -> Vec<(usize, String)> {
