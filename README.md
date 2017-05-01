@@ -11,7 +11,7 @@ Rust
 ### Theme
 Kimbie dark
 
-### CAUTION
+# CAUTION
 다음과 같은 이유로 매우 조심하시길 바랍니다.
 
 1. 소스코드에서 뿜어져 나오는 향기가 심상치 않습니다.
