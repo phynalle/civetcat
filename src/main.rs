@@ -21,6 +21,7 @@ mod pipeline;
 mod tokenizer;
 
 use lang::Highlighter;
+use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
 
 #[derive(Copy, Clone)]
@@ -57,12 +58,18 @@ fn run(mut parsed: Parsed) {
         let printer = Printer::new(parsed.options);
         if file_name == "-" {
             printer.print(std::io::stdin());
-        } else if file_name.ends_with(".rs") {
-            pipeline::do_pipeline(file_name);
         } else {
             match File::open(file_name.clone()) {
-                Ok(file) => {
-                    printer.print(file);
+                Ok(mut file) => {
+                    if file_name.ends_with(".rs") {
+                        let mut pl: Pipeline = Default::default();
+                        let mut s = String::new();
+                        let _ = file.read_to_string(&mut s);
+                        printer.print(pl.process(&s));
+                    } else {
+                        printer.print(file);
+                    }
+                    
                 }
                 Err(e) => {
                     print_error(format!("{}: {}", file_name, e));
@@ -139,7 +146,7 @@ impl Printer {
 
     fn print<R: Read>(&self, r: R) {
         let reader = BufReader::new(r);
-        let reader = self.hl.apply(reader);
+        // let reader = self.hl.apply(reader);
 
         for line in reader.lines() {
             self.print_line(line.unwrap());
