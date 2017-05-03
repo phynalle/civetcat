@@ -55,7 +55,7 @@ impl Pattern {
         if let Some(m) = pcre.exec(text) {
             let mut captured = Vec::new();
             for i in 1..m.string_count() {
-                if let Some(ref name) = self.captures.get(&i.to_string()) {
+                if let Some(name) = self.captures.get(&i.to_string()) {
                     captured.push((i, m.group_start(i), m.group_end(i), name.to_string()));
                 }
             }
@@ -134,7 +134,7 @@ impl Tokenizer {
             (self.grammar.global.clone(), None)
         } else {
             let block = self.states.top().block.clone();
-            let result = block.end.find(&line);
+            let result = block.end.find(line);
             (block, result)
         };
 
@@ -142,7 +142,7 @@ impl Tokenizer {
             .iter()
             .filter_map(|scope| {
                 let scope = if let Scope::Include(ref inc) = *scope {
-                    if inc.starts_with("#") {
+                    if inc.starts_with('#') {
                         self.grammar.repository.get(&inc[1..]).unwrap()
                     } else {
                         panic!(format!("Yet unimplemented: including : {}", inc));

@@ -1,10 +1,11 @@
+#![cfg_attr(feature="clippy", feature(plugin))]
+
+#![cfg_attr(feature="clippy", plugin(clippy))]
+
 #[macro_use]
 extern crate serde_derive;
-
 extern crate serde;
 extern crate serde_json;
-
-extern crate regex;
 extern crate pcre;
 
 use std::cell::Cell;
@@ -40,7 +41,7 @@ fn main() {
     match result {
         Ok(parsed) => run(parsed),
         Err(e) => {
-            print_error(e);
+            print_error(&e);
             let _ = writeln!(&mut std::io::stderr(),
                              "usage: {} [-n] [file ...]",
                              get_exe_name());
@@ -53,7 +54,7 @@ fn run(mut parsed: Parsed) {
         parsed.file_names.push("-".to_owned());
     }
 
-    for file_name in parsed.file_names.iter() {
+    for file_name in &parsed.file_names {
         let printer = Printer::new(parsed.options);
         if file_name == "-" {
             printer.print(std::io::stdin());
@@ -71,14 +72,14 @@ fn run(mut parsed: Parsed) {
                     
                 }
                 Err(e) => {
-                    print_error(format!("{}: {}", file_name, e));
+                    print_error(&format!("{}: {}", file_name, e));
                 }
             }
         }
     }
 }
 
-fn print_error(err: String) {
+fn print_error(err: &str) {
     let exe = get_exe_name();
     let mut stderr = std::io::stderr();
     let _ = writeln!(&mut stderr, "{}: {}", exe, err);
@@ -88,7 +89,7 @@ fn get_exe_name() -> String {
     std::env::current_exe()
         .ok()
         .and_then(|p| p.file_name().and_then(|s| s.to_str()).map(|s| s.to_string()))
-        .unwrap_or(EXECUTABLE_NAME.to_owned())
+        .unwrap_or_else(|| EXECUTABLE_NAME.to_owned())
 }
 
 fn parse_options(mut flags: Vec<String>) -> Result<Parsed, String> {
@@ -96,7 +97,7 @@ fn parse_options(mut flags: Vec<String>) -> Result<Parsed, String> {
     while !flags.is_empty() {
         {
             let first = &flags[0];
-            if !first.starts_with("-") || first.len() == 1 {
+            if !first.starts_with('-') || first.len() == 1 {
                 break;
             }
         }

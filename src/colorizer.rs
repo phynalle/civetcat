@@ -49,13 +49,13 @@ impl Settings {
         let mut new = self.clone();
         if let Some(set) = other {
             if new.foreground.is_none() {
-                new.foreground = set.foreground.clone();
+                new.foreground = set.foreground;
             }
             if new.background.is_none() {
-                new.background = set.background.clone();
+                new.background = set.background;
             }
             if new.font_style.is_none() {
-                new.font_style = set.font_style.clone();
+                new.font_style = set.font_style;
             }
         }
         new
@@ -124,24 +124,24 @@ impl ScopeTree {
                 .as_ref()
                 .unwrap()
                 .as_str()
-                .split(",")
+                .split(',')
                 .map(|s| s.trim())
                 .collect();
 
             for name in scope_names {
-                tree.insert(&name, scope.settings.clone());
+                tree.insert(name, scope.settings.clone());
             }
         }
         Ok(tree)
     }
 
     fn insert(&mut self, key: &str, value: Settings) {
-        let keys: Vec<_> = key.split(".").collect();
+        let keys: Vec<_> = key.split('.').collect();
         self.root.insert(&keys, value);
     }
 
     pub fn get(&self, key: &str) -> Option<Settings> {
-        let keys: Vec<_> = key.split(".").collect();
+        let keys: Vec<_> = key.split('.').collect();
         self.root.get(&keys)
     }
 
@@ -176,7 +176,7 @@ impl Node {
         } else {
             let node = self.children
                 .entry(keys[0].to_string())
-                .or_insert(Node::new(Settings::empty()));
+                .or_insert_with(|| Node::new(Settings::empty()));
             (*node).insert(&keys[1..], value);
         }
     }
@@ -185,17 +185,15 @@ impl Node {
         assert!(!keys.is_empty());
         if keys.is_empty() {
             Some(self.value.clone())
-        } else {
-            if let Some(node) = self.children.get(keys[0]) {
-                let v = node.get(&keys[1..]);
-                if v.is_none() || v.as_ref().unwrap().is_empty() {
-                    Some(self.value.clone())
-                } else {
-                    v
-                }
-            } else {
+        } else if let Some(node) = self.children.get(keys[0]) {
+            let v = node.get(&keys[1..]);
+            if v.is_none() || v.as_ref().unwrap().is_empty() {
                 Some(self.value.clone())
+            } else {
+                v
             }
+        } else {
+            Some(self.value.clone())
         }
     }
 
@@ -224,7 +222,8 @@ impl<'a> TextColorizer<'a> {
         }
     }
 
-    pub fn process(tokens: &'a Vec<(usize, usize, Settings)>) -> Vec<(usize, String)> {
+    // pub fn process(tokens: &'a Vec<(usize, usize, Settings)>) -> Vec<(usize, String)> {
+    pub fn process(tokens: &'a [(usize, usize, Settings)]) -> Vec<(usize, String)> {
         let mut tc = TextColorizer::new();
         tc.apply(tokens);
         tc.take()
@@ -272,7 +271,7 @@ impl<'a> TextColorizer<'a> {
         }
     }
 
-    fn apply(&mut self, pairs: &'a Vec<(usize, usize, Settings)>) {
+    fn apply(&mut self, pairs: &'a [(usize, usize, Settings)]) {
         for p in pairs {
             if self.is_empty() {
                 self.push(p);

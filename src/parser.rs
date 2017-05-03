@@ -106,7 +106,7 @@ impl<'a> SimpleTokenizer<'a> {
             if (word.as_bytes()[0] as char).is_digit(10) {
                 return None;
             }
-            let ttype = if let Ok(_) = keywords.binary_search(&word.as_str()) {
+            let ttype = if keywords.binary_search(&word.as_str()).is_ok() {
                 TokenType::Keyword
             } else {
                 TokenType::PlainText
@@ -138,11 +138,9 @@ impl<'a> SimpleTokenizer<'a> {
 
         } else {
             while pos < self.len {
-                if text[pos] == open {
-                    if text[pos - 1] != b'\\' {
-                        pos += 1;
-                        break;
-                    }
+                if text[pos] == open && text[pos - 1] != b'\\' {
+                    pos += 1;
+                    break;
                 }
                 pos += 1;
             }

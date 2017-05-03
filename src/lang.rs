@@ -28,7 +28,7 @@ impl Highlighter {
                 format!("{}{}{}", colorize(n), token.text, colorize(0))
                     .replace('\n', format!("{}\n{}", colorize(0), colorize(n)).as_str())
             } else {
-                format!("{}", token.text)
+                token.text.to_owned()
             };
             replaced.push_str(&s);
         }

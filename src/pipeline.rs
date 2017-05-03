@@ -64,6 +64,6 @@ impl Default for Pipeline {
 fn load_grammar(filename: &str) -> Grammar {
     match Syntax::new(filename) {
         Ok(s) => s.compact(),
-        Err(_) => panic!("panic~~"),
+        _ => panic!("panic~~"),
     }
 }

@@ -39,7 +39,7 @@ impl Pattern {
                                     .map(|(key, val)| (key.to_string(), val.name.clone()))
                                     .collect()
                             })
-                            .unwrap_or(HashMap::new()),
+                            .unwrap_or_default(),
                     },
                     end: tokenizer::Pattern {
                         pattern: p.end.clone(),
@@ -50,7 +50,7 @@ impl Pattern {
                                     .map(|(key, val)| (key.to_string(), val.name.clone()))
                                     .collect()
                             })
-                            .unwrap_or(HashMap::new()),
+                            .unwrap_or_default(),
                     },
                     subscopes: p.patterns
                         .as_ref()
@@ -59,7 +59,7 @@ impl Pattern {
                                 .map(|pat| pat.compact())
                                 .collect()
                         })
-                        .unwrap_or(Vec::new()),
+                        .unwrap_or_default(),
                 };
                 tokenizer::Scope::Block(Rc::new(b))
 
@@ -76,7 +76,7 @@ impl Pattern {
                                     .map(|(key, val)| (key.to_string(), val.name.clone()))
                                     .collect()
                             })
-                            .unwrap_or(HashMap::new()),
+                            .unwrap_or_default(),
                     },
                 };
                 tokenizer::Scope::Match(Rc::new(m))
