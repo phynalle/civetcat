@@ -241,6 +241,8 @@ impl States {
 struct MatchState {
     block: Rc<Block>,
     pos: usize,
+
+    #[allow(dead_code)]
     captured: HashMap<usize, String>,
 }
 

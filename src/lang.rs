@@ -2,9 +2,11 @@ use std::io::{Read, Cursor};
 
 use parser::{Parser, SimpleTokenizer, TokenType};
 
+#[allow(dead_code)]
 pub struct Highlighter;
 
 impl Highlighter {
+    #![allow(dead_code)]
     pub fn apply<R>(&self, mut reader: R) -> Cursor<String>
         where R: Read
     {
@@ -20,7 +22,7 @@ impl Highlighter {
                 TokenType::Comment => (true, 32),
                 _ => (false, 0),
             };
-
+            
             let s = if is_colored {
                 // it would be problem when return carrage is '\r\n'
                 format!("{}{}{}", colorize(n), token.text, colorize(0))
@@ -34,6 +36,7 @@ impl Highlighter {
     }
 }
 
+#[allow(dead_code)]
 fn colorize(color: u8) -> String {
     format!("{}[{}m", String::from_utf8(vec![27]).unwrap(), color)
 }

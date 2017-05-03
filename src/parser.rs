@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+#[allow(dead_code)]
 pub struct Parser<'a, T>
     where T: 'a + Tokenizer<'a, T>
 {
@@ -10,6 +11,7 @@ pub struct Parser<'a, T>
 impl<'a, T> Parser<'a, T>
     where T: Tokenizer<'a, T>
 {
+    #[allow(dead_code)]
     pub fn new(text: &'a str) -> Parser<'a, T> {
         Parser {
             tokenizer: T::with_text(text),
@@ -17,6 +19,7 @@ impl<'a, T> Parser<'a, T>
         }
     }
 
+    #[allow(dead_code)]
     pub fn parse_next(&mut self) -> Option<Token<'a>> {
         self.tokenizer.next()
     }

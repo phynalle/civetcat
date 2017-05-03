@@ -20,7 +20,6 @@ mod colorizer;
 mod pipeline;
 mod tokenizer;
 
-use lang::Highlighter;
 use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
 
@@ -122,7 +121,6 @@ fn parse_options(mut flags: Vec<String>) -> Result<Parsed, String> {
 struct Printer {
     line_num: Cell<usize>,
     options: Options,
-    hl: Highlighter,
 }
 
 impl Printer {
@@ -130,7 +128,6 @@ impl Printer {
         Printer {
             line_num: Cell::new(0),
             options: options,
-            hl: Highlighter,
         }
     }
 

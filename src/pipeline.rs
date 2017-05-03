@@ -4,8 +4,7 @@ use std::default::Default;
 use colorizer::ScopeTree;
 use colorizer::TextColorizer;
 use syntax::Syntax;
-// use syntax::Tokenizer;
-use tokenizer::{self, Builder, Tokenizer, Grammar};
+use tokenizer::{Builder, Grammar};
 
 pub struct Pipeline {
     scopes: ScopeTree,

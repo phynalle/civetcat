@@ -44,6 +44,7 @@ impl Settings {
         self.foreground.is_none() && self.background.is_none() && self.font_style.is_none()
     }
 
+    #[allow(dead_code)]
     pub fn from(&self, other: Option<Settings>) -> Settings {
         let mut new = self.clone();
         if let Some(set) = other {
@@ -144,10 +145,10 @@ impl ScopeTree {
         self.root.get(&keys)
     }
 
-    fn print_debug(&self) {
-        println!("root");
-        self.root.print_debug(1);
-    }
+    // fn print_debug(&self) {
+    //     println!("root");
+    //     self.root.print_debug(1);
+    // }
 }
 
 struct Node {
@@ -198,38 +199,14 @@ impl Node {
         }
     }
 
-    fn print_debug(&self, depth: usize) {
-        use std::iter::repeat;
-        let blank: String = repeat("..".to_string()).take(depth).collect();
-        for (key, node) in &self.children {
-            println!("{}{} -> {:?}", blank, key, node.value.foreground);
-            node.print_debug(depth + 1);
-        }
-    }
-}
-
-fn load_theme() -> Result<ScopeTree> {
-    let f = File::open("themes/Kimbie_dark.json")?;
-    let theme: Theme = serde_json::from_reader(f)?;
-
-    let mut tree = ScopeTree::new();
-    for scope in &theme.settings {
-        if scope.scope.is_none() {
-            continue;
-        }
-        let scope_names: Vec<_> = scope.scope
-            .as_ref()
-            .unwrap()
-            .as_str()
-            .split(",")
-            .map(|s| s.trim())
-            .collect();
-
-        for name in scope_names {
-            tree.insert(&name, scope.settings.clone());
-        }
-    }
-    Ok(tree)
+    // fn print_debug(&self, depth: usize) {
+    //     use std::iter::repeat;
+    //     let blank: String = repeat("..".to_string()).take(depth).collect();
+    //     for (key, node) in &self.children {
+    //         println!("{}{} -> {:?}", blank, key, node.value.foreground);
+    //         node.print_debug(depth + 1);
+    //     }
+    // }
 }
 
 pub struct TextColorizer<'a> {
