@@ -44,7 +44,7 @@ impl Settings {
         self.foreground.is_none() && self.background.is_none() && self.font_style.is_none()
     }
 
-     pub fn from(&self, other: Option<Settings>) -> Settings {
+    pub fn from(&self, other: Option<Settings>) -> Settings {
         let mut new = self.clone();
         if let Some(set) = other {
             if new.foreground.is_none() {

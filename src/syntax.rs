@@ -1,9 +1,12 @@
 use std::io::Result;
+use std::rc::Rc;
 use std::fs::File;
 use std::collections::HashMap;
 
 use pcre::Pcre;
 use serde_json;
+
+use tokenizer;
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
@@ -19,6 +22,67 @@ impl Pattern {
         match *self {
             Pattern::Include(ref p) => p.refer(&repos),
             _ => &self,
+        }
+    }
+
+    fn compact(&self) -> tokenizer::Scope {
+        match *self {
+            Pattern::Include(ref p) => tokenizer::Scope::Include(p.include.clone()),
+            Pattern::Block(ref p) => {
+                let b = tokenizer::Block {
+                    name: p.scope.clone(),
+                    begin: tokenizer::Pattern {
+                        pattern: p.begin.clone(),
+                        captures: p.begin_captures
+                            .as_ref()
+                            .map(|caps| {
+                                caps.iter()
+                                    .map(|(key, val)| (key.to_string(), val.name.clone()))
+                                    .collect()
+                            })
+                            .unwrap_or(HashMap::new()),
+                    },
+                    end: tokenizer::Pattern {
+                        pattern: p.end.clone(),
+                        captures: p.end_captures
+                            .as_ref()
+                            .map(|caps| {
+                                caps.iter()
+                                    .map(|(key, val)| (key.to_string(), val.name.clone()))
+                                    .collect()
+                            })
+                            .unwrap_or(HashMap::new()),
+                    },
+                    subscopes: p.patterns
+                        .as_ref()
+                        .map(|pats| {
+                            pats.iter()
+                                .map(|pat| pat.compact())
+                                .collect()
+                        })
+                        .unwrap_or(Vec::new()),
+                };
+                tokenizer::Scope::Block(Rc::new(b))
+
+            }
+            Pattern::Match(ref p) => {
+                let m = tokenizer::Match {
+                    name: p.scope.clone(),
+                    pat: tokenizer::Pattern {
+                        pattern: p.pattern.clone(),
+                        captures: p.captures
+                            .as_ref()
+                            .map(|caps| {
+                                caps.iter()
+                                    .map(|(key, val)| (key.to_string(), val.name.clone()))
+                                    .collect()
+                            })
+                            .unwrap_or(HashMap::new()),
+                    },
+                };
+                tokenizer::Scope::Match(Rc::new(m))
+            }
+            _ => panic!("unreachable"),
         }
     }
 }
@@ -141,13 +205,40 @@ impl Match {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-struct Syntax {
+pub struct Syntax {
     name: String,
     scope_name: String,
     file_types: Vec<String>,
     patterns: Vec<Pattern>,
     repository: HashMap<String, Pattern>,
     version: String,
+}
+
+impl Syntax {
+    pub fn new(filename: &str) -> Result<Syntax> {
+        let file = File::open(filename)?;
+        Ok(serde_json::from_reader(file).unwrap())
+    }
+
+    pub fn compact(&self) -> tokenizer::Grammar {
+        let repos = self.repository
+            .iter()
+            .map(|(name, pat)| (name.clone(), pat.compact()))
+            .collect::<HashMap<String, tokenizer::Scope>>();
+        tokenizer::Grammar {
+            repository: repos.clone().into(),
+            global: tokenizer::Block {
+                    name: None,
+                    begin: tokenizer::Pattern::empty(),
+                    end: tokenizer::Pattern::empty(),
+                    subscopes: self.patterns
+                        .iter()
+                        .map(|pat| pat.compact())
+                        .collect(),
+                }
+                .into(),
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -253,16 +344,16 @@ impl<'a> RegexTokenizer<'a> {
                      patterns: &'a Vec<Pattern>,
                      mut cursor: &mut TextCursor)
                      -> Option<Vec<Token>> {
-        /*let (blk, mat): (Vec<_>, Vec<_>) = patterns
-            .iter()
-            .partition(|pat| {
-                let pat = pat.refer(self.repository());
-                if let &Pattern::Block(ref p) = pat {
-                    true
-                } else {
-                    false
-                }
-            });*/
+        // let (blk, mat): (Vec<_>, Vec<_>) = patterns
+        // .iter()
+        // .partition(|pat| {
+        // let pat = pat.refer(self.repository());
+        // if let &Pattern::Block(ref p) = pat {
+        // true
+        // } else {
+        // false
+        // }
+        // });
 
         for pat in patterns {
             let pat = pat.refer(self.repository());
@@ -287,8 +378,6 @@ impl<'a> RegexTokenizer<'a> {
     fn tokenize_line<'b>(&mut self, mut cursor: &mut TextCursor) -> Option<Vec<Token>> {
         match *self.stack.top().pattern {
             Pattern::Block(ref r) => {
-
-
                 if let Some(ref pats) = r.patterns {
                     let result = self.tokenize2(&pats, &mut cursor);
                     if result.is_some() {
@@ -313,7 +402,7 @@ impl<'a> RegexTokenizer<'a> {
                         text: String::from(&cursor.orig[pos_begin..pos_end]),
                         captures: vec![(pos_begin, pos_end, scope)],
                     };
-                    
+
                     tokens.push(token);
                     cursor.consume(m.group_end(0));
                 }
@@ -387,7 +476,7 @@ impl<'a> Stack<'a> {
 struct State<'a> {
     pattern: &'a Pattern,
     pos: usize,
- }
+}
 
 impl<'a> State<'a> {
     fn new(pattern: &'a Pattern, pos: usize) -> State<'a> {

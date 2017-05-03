@@ -18,6 +18,7 @@ mod parser;
 mod syntax;
 mod colorizer;
 mod pipeline;
+mod tokenizer;
 
 use lang::Highlighter;
 static EXECUTABLE_NAME: &'static str = "cv";
