@@ -344,16 +344,6 @@ impl<'a> RegexTokenizer<'a> {
                      patterns: &'a Vec<Pattern>,
                      mut cursor: &mut TextCursor)
                      -> Option<Vec<Token>> {
-        // let (blk, mat): (Vec<_>, Vec<_>) = patterns
-        // .iter()
-        // .partition(|pat| {
-        // let pat = pat.refer(self.repository());
-        // if let &Pattern::Block(ref p) = pat {
-        // true
-        // } else {
-        // false
-        // }
-        // });
 
         for pat in patterns {
             let pat = pat.refer(self.repository());
@@ -419,29 +409,6 @@ pub struct Token {
     text: String,
     pub captures: Vec<(usize, usize, String)>,
 }
-
-// struct Repository {
-//     inner: HashMap<String, Rc<CompiledPattern>>
-// }
-
-// impl Repository {
-//     fn new(base: &HashMap<String, Pattern>) {
-//         for (name, pattern) in base {
-
-//         }
-
-//     }
-// }
-
-// struct Ruler {
-//     repos: HashMap<String, CompiledPattern>, // name, pattern
-// }
-
-// #[derive(Debug)]
-// struct PatternMap {
-//     names: Vec<Pattern>,
-//     re: RegexSet,
-// }
 
 struct Stack<'a> {
     scopes: Vec<State<'a>>,

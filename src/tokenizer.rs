@@ -121,35 +121,29 @@ impl Tokenizer {
                 pos += read_bytes;
             }
         }
-        // println!("tokens = {:?}", tokens);
         tokens
     }
 
     fn tokenize_line(&mut self, line: &str, offset: usize) -> Option<(usize, Vec<Token>)> {
-        let (is_global, block) = if self.states.is_empty() {
-            (true, self.grammar.global.clone())
-        } else {
-            (false, self.states.top().block.clone())
-        };
-
-        let end_matched = if !is_global {
-            block.end.find(&line)
-        } else {
-            None
-        };
-
         enum Matched {
             Sub(Scope),
             End,
         };
 
-        let repos = self.grammar.repository.clone();
+        let (block, end_matched) = if self.states.is_empty() {
+            (self.grammar.global.clone(), None)
+        } else {
+            let block = self.states.top().block.clone();
+            let result = block.end.find(&line);
+            (block, result)
+        };
+
         let matched = block.subscopes
             .iter()
             .filter_map(|scope| {
                 let scope = if let Scope::Include(ref inc) = *scope {
                     if inc.starts_with("#") {
-                        repos.get(&inc[1..]).unwrap()
+                        self.grammar.repository.get(&inc[1..]).unwrap()
                     } else {
                         panic!(format!("Yet unimplemented: including : {}", inc));
                     }
