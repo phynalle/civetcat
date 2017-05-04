@@ -48,15 +48,15 @@ impl Style {
     #[allow(dead_code)]
     pub fn from(&self, other: Option<Style>) -> Style {
         let mut new = self.clone();
-        if let Some(set) = other {
+        if let Some(style) = other {
             if new.foreground.is_none() {
-                new.foreground = set.foreground;
+                new.foreground = style.foreground;
             }
             if new.background.is_none() {
-                new.background = set.background;
+                new.background = style.background;
             }
             if new.font_style.is_none() {
-                new.font_style = set.font_style;
+                new.font_style = style.font_style;
             }
         }
         new
@@ -66,37 +66,22 @@ impl Style {
         if self.is_empty() {
             return Style::reset();
         }
-
-        let mut appended = false;
-        let mut s: String = "\x1B[".to_owned();
-        if let Some(ref style) = self.font_style {
-            appended = match style.to_lowercase().as_ref() {
-                "bold" => {
-                    s.push('1');
-                    true
-                }
-                "italic" => {
-                    s.push('4');
-                    true
-                }
-                _ => false,
+        
+        let mut props = Vec::new();
+        if let Some(ref fs) = self.font_style {
+            match fs.to_lowercase().as_ref() {
+                "bold" => props.push("1".to_owned()),
+                "italic" => props.push("4".to_owned()),
+                _ => (),
             };
         }
         if let Some(fg) = self.foreground {
-            if appended {
-                s.push(';');
-            }
-            appended = true;
-            s.push_str(&format!("38;5;{}", fg));
+            props.push(format!("38;5;{}", fg));
         }
         if let Some(bg) = self.background {
-            if appended {
-                s.push(';');
-            }
-            s.push_str(&format!("48;5;{}", bg));
+            props.push(format!("48;5;{}", bg));
         }
-        s.push('m');
-        s
+        format!("\x1B[{}m", props.concat())
     }
 
     pub fn reset() -> String {
