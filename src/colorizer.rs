@@ -183,7 +183,17 @@ impl Node {
 
     fn get(&self, keys: &[&str]) -> Option<Settings> {
         assert!(!keys.is_empty());
-        if keys.is_empty() {
+        if !keys.is_empty() {
+            if let Some(node) = self.children.get(keys[0]) {
+                let v = node.get(&keys[1..]);
+                if v.is_some() && !v.as_ref().unwrap().is_empty() {
+                    return v;
+                }
+            }
+        }
+        Some(self.value.clone())
+
+        /*if keys.is_empty() {
             Some(self.value.clone())
         } else if let Some(node) = self.children.get(keys[0]) {
             let v = node.get(&keys[1..]);
@@ -194,7 +204,7 @@ impl Node {
             }
         } else {
             Some(self.value.clone())
-        }
+        }*/
     }
 
     // fn print_debug(&self, depth: usize) {
@@ -222,7 +232,6 @@ impl<'a> TextColorizer<'a> {
         }
     }
 
-    // pub fn process(tokens: &'a Vec<(usize, usize, Settings)>) -> Vec<(usize, String)> {
     pub fn process(tokens: &'a [(usize, usize, Settings)]) -> Vec<(usize, String)> {
         let mut tc = TextColorizer::new();
         tc.apply(tokens);
