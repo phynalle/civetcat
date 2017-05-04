@@ -148,7 +148,10 @@ struct Block {
 //             if let Some(ref caps) = self.begin_captures {
 //                 for i in 1..m.string_count() {
 //                     if let Some(ref cap) = caps.get(&i.to_string()) {
-//                         captures.push((pos+m.group_start(i), pos+m.group_end(i), cap.name.clone()));
+//                          captures.push((
+//                             pos+m.group_start(i),
+//                             pos+m.group_end(i),
+//                             cap.name.clone()));
 //                     }
 //                 }
 //             }
@@ -186,7 +189,10 @@ struct Match {
 //             if let Some(ref caps) = self.captures {
 //                 for i in 1..m.string_count() {
 //                     if let Some(ref cap) = caps.get(&i.to_string()) {
-//                         captures.push((pos+m.group_start(i), pos+m.group_end(i), cap.name.clone()));
+//                        captures.push((
+//                            pos+m.group_start(i),
+//                            pos+m.group_end(i),
+//                            cap.name.clone()));
 //                     }
 //                 }
 //             }

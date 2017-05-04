@@ -1,5 +1,5 @@
 use std::io::Cursor;
-use std::default::Default;  
+use std::default::Default;
 
 use colorizer::ScopeTree;
 use colorizer::TextColorizer;
@@ -8,12 +8,12 @@ use tokenizer::{Builder, Grammar};
 
 pub struct Pipeline {
     scopes: ScopeTree,
-    builder: Builder, 
+    builder: Builder,
 }
 
 impl Pipeline {
     pub fn new(scopes: ScopeTree, builder: Builder) -> Pipeline {
-        Pipeline { 
+        Pipeline {
             scopes: scopes,
             builder: builder,
         }
@@ -22,7 +22,7 @@ impl Pipeline {
     pub fn process(&mut self, text: &str) -> Cursor<String> {
         let mut tok = self.builder.build();
         let colored = text.lines()
-            .map(|line| (line, tok.tokenize(line)) )
+            .map(|line| (line, tok.tokenize(line)))
             .map(|(line, tokens)| {
                 let mut v: Vec<_> = tokens.into_iter()
                     .filter_map(|t| {
@@ -48,7 +48,7 @@ impl Pipeline {
                 s
             })
             .collect::<String>();
-            Cursor::new(colored)
+        Cursor::new(colored)
     }
 }
 

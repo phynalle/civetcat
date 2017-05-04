@@ -66,7 +66,7 @@ impl Style {
         if self.is_empty() {
             return Style::reset();
         }
-        
+
         let mut props = Vec::new();
         if let Some(ref fs) = self.font_style {
             match fs.to_lowercase().as_ref() {
@@ -138,7 +138,6 @@ impl ScopeTree {
 }
 
 struct Node {
-    // name: String,
     value: Style,
     children: HashMap<String, Node>,
 }

@@ -160,7 +160,7 @@ impl Tokenizer {
                     }
                 }
             })
-            .min_by(|x, y| x.1.start.cmp(&y.1.start)); 
+            .min_by(|x, y| x.1.start.cmp(&y.1.start));
 
         let selected = match (end_matched, matched) {
             (Some(end_matched), Some(matched)) => {

@@ -69,7 +69,6 @@ fn run(mut parsed: Parsed) {
                     } else {
                         printer.print(file);
                     }
-                    
                 }
                 Err(e) => {
                     print_error(&format!("{}: {}", file_name, e));
