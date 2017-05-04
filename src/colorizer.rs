@@ -20,20 +20,21 @@ struct Theme {
 struct Scope {
     name: Option<String>,
     scope: Option<String>,
-    settings: Settings,
+    #[serde(rename="settings")]
+    style: Style,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Settings {
+pub struct Style {
     foreground: Option<usize>,
     background: Option<usize>,
     font_style: Option<String>,
 }
 
-impl Settings {
-    pub fn empty() -> Settings {
-        Settings {
+impl Style {
+    pub fn empty() -> Style {
+        Style {
             foreground: None,
             background: None,
             font_style: None,
@@ -45,7 +46,7 @@ impl Settings {
     }
 
     #[allow(dead_code)]
-    pub fn from(&self, other: Option<Settings>) -> Settings {
+    pub fn from(&self, other: Option<Style>) -> Style {
         let mut new = self.clone();
         if let Some(set) = other {
             if new.foreground.is_none() {
@@ -63,7 +64,7 @@ impl Settings {
 
     pub fn color(&self) -> String {
         if self.is_empty() {
-            return Settings::reset();
+            return Style::reset();
         }
 
         let mut appended = false;
@@ -109,7 +110,7 @@ pub struct ScopeTree {
 
 impl ScopeTree {
     pub fn new() -> ScopeTree {
-        ScopeTree { root: Node::new(Settings::empty()) }
+        ScopeTree { root: Node::new(Style::empty()) }
     }
 
     pub fn create(filename: &str) -> Result<ScopeTree> {
@@ -129,18 +130,18 @@ impl ScopeTree {
                 .collect();
 
             for name in scope_names {
-                tree.insert(name, scope.settings.clone());
+                tree.insert(name, scope.style.clone());
             }
         }
         Ok(tree)
     }
 
-    fn insert(&mut self, key: &str, value: Settings) {
+    fn insert(&mut self, key: &str, value: Style) {
         let keys: Vec<_> = key.split('.').collect();
         self.root.insert(&keys, value);
     }
 
-    pub fn get(&self, key: &str) -> Option<Settings> {
+    pub fn get(&self, key: &str) -> Option<Style> {
         let keys: Vec<_> = key.split('.').collect();
         self.root.get(&keys)
     }
@@ -153,19 +154,19 @@ impl ScopeTree {
 
 struct Node {
     // name: String,
-    value: Settings,
+    value: Style,
     children: HashMap<String, Node>,
 }
 
 impl Node {
-    fn new(value: Settings) -> Node {
+    fn new(value: Style) -> Node {
         Node {
             value: value,
             children: HashMap::new(),
         }
     }
 
-    fn insert(&mut self, keys: &[&str], value: Settings) {
+    fn insert(&mut self, keys: &[&str], value: Style) {
         assert!(!keys.is_empty());
         if keys.len() == 1 {
             if let Some(node) = self.children.get_mut(keys[0]) {
@@ -176,12 +177,12 @@ impl Node {
         } else {
             let node = self.children
                 .entry(keys[0].to_string())
-                .or_insert_with(|| Node::new(Settings::empty()));
+                .or_insert_with(|| Node::new(Style::empty()));
             (*node).insert(&keys[1..], value);
         }
     }
 
-    fn get(&self, keys: &[&str]) -> Option<Settings> {
+    fn get(&self, keys: &[&str]) -> Option<Style> {
         if !keys.is_empty() {
             if let Some(node) = self.children.get(keys[0]) {
                 let v = node.get(&keys[1..]);
@@ -204,7 +205,7 @@ impl Node {
 }
 
 pub struct TextColorizer<'a> {
-    stack: Vec<&'a (usize, usize, Settings)>,
+    stack: Vec<&'a (usize, usize, Style)>,
     order: Vec<(usize, String)>,
     offset: usize,
 }
@@ -218,13 +219,13 @@ impl<'a> TextColorizer<'a> {
         }
     }
 
-    pub fn process(tokens: &'a [(usize, usize, Settings)]) -> Vec<(usize, String)> {
+    pub fn process(tokens: &'a [(usize, usize, Style)]) -> Vec<(usize, String)> {
         let mut tc = TextColorizer::new();
         tc.apply(tokens);
         tc.take()
     }
 
-    fn top(&self) -> Option<&'a (usize, usize, Settings)> {
+    fn top(&self) -> Option<&'a (usize, usize, Style)> {
         if self.stack.is_empty() {
             None
         } else {
@@ -232,7 +233,7 @@ impl<'a> TextColorizer<'a> {
         }
     }
 
-    fn push(&mut self, p: &'a (usize, usize, Settings)) {
+    fn push(&mut self, p: &'a (usize, usize, Style)) {
         let s = p.2.color();
         let incr = s.len();
 
@@ -246,7 +247,7 @@ impl<'a> TextColorizer<'a> {
     }
 
     fn pop_until<F>(&mut self, f: F)
-        where F: Fn(&'a (usize, usize, Settings)) -> bool
+        where F: Fn(&'a (usize, usize, Style)) -> bool
     {
         while !self.is_empty() {
             let top = self.top().unwrap();
@@ -255,7 +256,7 @@ impl<'a> TextColorizer<'a> {
             }
             self.stack.pop();
             let code = if self.is_empty() {
-                Settings::reset()
+                Style::reset()
             } else {
                 self.top().unwrap().2.color()
             };
@@ -266,7 +267,7 @@ impl<'a> TextColorizer<'a> {
         }
     }
 
-    fn apply(&mut self, pairs: &'a [(usize, usize, Settings)]) {
+    fn apply(&mut self, pairs: &'a [(usize, usize, Style)]) {
         for p in pairs {
             if self.is_empty() {
                 self.push(p);
