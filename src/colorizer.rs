@@ -182,7 +182,6 @@ impl Node {
     }
 
     fn get(&self, keys: &[&str]) -> Option<Settings> {
-        assert!(!keys.is_empty());
         if !keys.is_empty() {
             if let Some(node) = self.children.get(keys[0]) {
                 let v = node.get(&keys[1..]);
@@ -192,19 +191,6 @@ impl Node {
             }
         }
         Some(self.value.clone())
-
-        /*if keys.is_empty() {
-            Some(self.value.clone())
-        } else if let Some(node) = self.children.get(keys[0]) {
-            let v = node.get(&keys[1..]);
-            if v.is_none() || v.as_ref().unwrap().is_empty() {
-                Some(self.value.clone())
-            } else {
-                v
-            }
-        } else {
-            Some(self.value.clone())
-        }*/
     }
 
     // fn print_debug(&self, depth: usize) {
