@@ -14,8 +14,8 @@ pub struct Pipeline {
 impl Pipeline {
     pub fn new(scopes: ScopeTree, builder: Builder) -> Pipeline {
         Pipeline {
-            scopes: scopes,
-            builder: builder,
+            scopes,
+            builder,
         }
     }
 

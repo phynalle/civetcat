@@ -127,7 +127,7 @@ impl Printer {
     fn new(options: Options) -> Printer {
         Printer {
             line_num: Cell::new(0),
-            options: options,
+            options,
         }
     }
 

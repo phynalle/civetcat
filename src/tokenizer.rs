@@ -106,7 +106,7 @@ pub struct Tokenizer {
 impl Tokenizer {
     pub fn new(grammar: Rc<Grammar>) -> Tokenizer {
         Tokenizer {
-            grammar: grammar,
+            grammar,
             states: States::new(),
         }
     }
@@ -249,9 +249,9 @@ struct MatchState {
 impl MatchState {
     fn new(block: Rc<Block>, pos: usize, captured: HashMap<usize, String>) -> MatchState {
         MatchState {
-            block: block,
-            pos: pos,
-            captured: captured,
+            block,
+            pos,
+            captured,
         }
     }
 }

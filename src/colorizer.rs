@@ -46,18 +46,16 @@ impl Style {
     }
 
     #[allow(dead_code)]
-    pub fn from(&self, other: Option<Style>) -> Style {
+    pub fn from(&self, style: Style) -> Style {
         let mut new = self.clone();
-        if let Some(style) = other {
-            if new.foreground.is_none() {
-                new.foreground = style.foreground;
-            }
-            if new.background.is_none() {
-                new.background = style.background;
-            }
-            if new.font_style.is_none() {
-                new.font_style = style.font_style;
-            }
+        if new.foreground.is_none() {
+            new.foreground = style.foreground;
+        }
+        if new.background.is_none() {
+            new.background = style.background;
+        }
+        if new.font_style.is_none() {
+            new.font_style = style.font_style;
         }
         new
     }
@@ -81,7 +79,7 @@ impl Style {
         if let Some(bg) = self.background {
             props.push(format!("48;5;{}", bg));
         }
-        format!("\x1B[{}m", props.concat())
+        format!("\x1B[{}m", props.join(";"))
     }
 
     pub fn reset() -> String {
@@ -91,18 +89,23 @@ impl Style {
 
 pub struct ScopeTree {
     root: Node,
+    #[allow(dead_code)]
+    global_style: Style,
 }
 
 impl ScopeTree {
-    pub fn new() -> ScopeTree {
-        ScopeTree { root: Node::new(Style::empty()) }
+    pub fn new(style: Style) -> ScopeTree {
+        ScopeTree { 
+            root: Node::new(Style::empty()),
+            global_style: style,
+        }
     }
 
     pub fn create(filename: &str) -> Result<ScopeTree> {
         let f = File::open(filename)?;
         let theme: Theme = serde_json::from_reader(f)?;
-        let mut tree = ScopeTree::new();
-        for scope in &theme.settings {
+        let mut tree = ScopeTree::new(theme.settings[0].style.clone());
+        for scope in &theme.settings[1..] {
             if scope.scope.is_none() {
                 continue;
             }
@@ -128,7 +131,8 @@ impl ScopeTree {
 
     pub fn get(&self, key: &str) -> Option<Style> {
         let keys: Vec<_> = key.split('.').collect();
-        self.root.get(&keys)
+        self.root
+            .get(&keys)
     }
 
     // fn print_debug(&self) {
@@ -145,7 +149,7 @@ struct Node {
 impl Node {
     fn new(value: Style) -> Node {
         Node {
-            value: value,
+            value,
             children: HashMap::new(),
         }
     }
