@@ -45,6 +45,7 @@ impl Style {
         self.foreground.is_none() && self.background.is_none() && self.font_style.is_none()
     }
 
+    #[allow(dead_code)]
     pub fn from(&self, style: Style) -> Style {
         let mut new = self.clone();
         if new.foreground.is_none() {

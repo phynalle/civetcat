@@ -1,0 +1,18 @@
+{
+    "languages":[
+        {
+            "name":"Rust",
+            "path":"rust.json",
+            "extensions":[
+                "rs"
+            ]
+        },
+        {
+            "name":"Go",
+            "path":"go.json",
+            "extensions":[
+                "go"
+            ]
+        }
+    ]
+}

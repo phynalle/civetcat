@@ -1,26 +1,25 @@
-use std::io::Cursor;
-use std::default::Default;
+use std::rc::Rc;
 
 use colorizer::ScopeTree;
 use colorizer::TextColorizer;
-use syntax::Syntax;
-use tokenizer::{Builder, Grammar};
+use tokenizer::{Tokenizer, Grammar};
 
 pub struct Pipeline {
     scopes: ScopeTree,
-    builder: Builder,
+    grammar: Rc<Grammar>,
 }
 
 impl Pipeline {
-    pub fn new(scopes: ScopeTree, builder: Builder) -> Pipeline {
+    pub fn new(grammar: Rc<Grammar>) -> Pipeline {
         Pipeline {
-            scopes,
-            builder,
+            scopes: ScopeTree::create("themes/Kimbie_dark.json").unwrap(),
+            grammar,
         }
     }
 
-    pub fn process(&mut self, text: &str) -> Cursor<String> {
-        let mut tok = self.builder.build();
+    #[allow(dead_code)]
+    pub fn process(&mut self, text: &str) -> String {
+        let mut tok = Tokenizer::new(self.grammar.clone());
         let colored = text.lines()
             .map(|line| (line, tok.tokenize(line)))
             .map(|(line, tokens)| {
@@ -48,22 +47,29 @@ impl Pipeline {
                 s
             })
             .collect::<String>();
-        Cursor::new(colored)
+        colored
     }
-}
 
-impl Default for Pipeline {
-    fn default() -> Self {
-        let scopes = ScopeTree::create("themes/Kimbie_dark.json").unwrap();
-        let grammar = load_grammar("syntaxes/rust.tmLanguage.json");
-        let builder = Builder::new(grammar);
-        Pipeline::new(scopes, builder)
-    }
-}
-
-fn load_grammar(filename: &str) -> Grammar {
-    match Syntax::new(filename) {
-        Ok(s) => s.compact(),
-        _ => panic!("panic~~"),
+    pub fn process_line(&mut self, line: &str) -> String {
+        let mut tok = Tokenizer::new(self.grammar.clone());
+        let tokens = tok.tokenize(line);
+        let mut tokens: Vec<_> = tokens.into_iter()
+            .filter_map(|t| {
+                let sts = self.scopes.get(&t.2);
+                sts.and_then(|sts| {
+                    if !sts.is_empty() {
+                        Some((t.0, t.1, sts))
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+            tokens.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
+            let mut s = line.to_owned();
+            for p in TextColorizer::process(&tokens) {
+                s.insert_str(p.0, &p.1);
+            }
+            s
     }
 }

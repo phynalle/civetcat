@@ -75,19 +75,19 @@ pub struct Grammar {
     pub global: Rc<Block>,
 }
 
-pub struct Builder {
-    grammar: Rc<Grammar>,
-}
+// pub struct Builder {
+//     grammar: Rc<Grammar>,
+// }
 
-impl Builder {
-    pub fn new(grammar: Grammar) -> Builder {
-        Builder { grammar: Rc::new(grammar) }
-    }
+// impl Builder {
+//     pub fn new(grammar: Grammar) -> Builder {
+//         Builder { grammar: Rc::new(grammar) }
+//     }
 
-    pub fn build(&self) -> Tokenizer {
-        Tokenizer::new(self.grammar.clone())
-    }
-}
+//     pub fn build(&self) -> Tokenizer {
+//         Tokenizer::new(self.grammar.clone())
+//     }
+// }
 
 struct MatchResult {
     start: usize,
