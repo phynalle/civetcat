@@ -7,6 +7,7 @@ cv [-n] [file.. ]
 ## Current States
 ###  Supported Langauges
 Rust
+Go
 
 ### Theme
 Kimbie dark
