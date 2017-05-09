@@ -1,4 +1,5 @@
 use std::io::Result;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::fs::File;
 use std::collections::HashMap;
@@ -54,7 +55,7 @@ impl Pattern {
                         })
                         .unwrap_or_default(),
                 };
-                tokenizer::Scope::Block(Rc::new(b))
+                tokenizer::Scope::Block(Rc::new(RefCell::new(b)))
 
             }
             Pattern::Match(ref p) => {
@@ -72,7 +73,7 @@ impl Pattern {
                             .unwrap_or_default(),
                     },
                 };
-                tokenizer::Scope::Match(Rc::new(m))
+                tokenizer::Scope::Match(Rc::new(RefCell::new(m)))
             }
             _ => panic!("unreachable"),
         }
@@ -129,7 +130,7 @@ impl Syntax {
             .collect::<HashMap<String, tokenizer::Scope>>();
         tokenizer::Grammar {
             repository: repos.clone().into(),
-            global: tokenizer::Block {
+            global: Rc::new(RefCell::new(tokenizer::Block {
                     name: None,
                     begin: tokenizer::Pattern::empty(),
                     end: tokenizer::Pattern::empty(),
@@ -137,8 +138,7 @@ impl Syntax {
                         .iter()
                         .map(|pat| pat.compact())
                         .collect(),
-                }
-                .into(),
+                })),
         }
     }
 }

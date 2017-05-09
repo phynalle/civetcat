@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use pcre::Pcre;
@@ -6,16 +7,16 @@ use pcre::Pcre;
 #[derive(Debug, Clone)]
 pub enum Scope {
     Include(String),
-    Match(Rc<Match>),
-    Block(Rc<Block>),
+    Match(Rc<RefCell<Match>>),
+    Block(Rc<RefCell<Block>>),
 }
 
 impl Scope {
-    fn name(&self) -> Option<&String> {
+    fn name(&self) -> Option<String> {
         match *self {
             Scope::Include(_) => None,
-            Scope::Match(ref mat) => mat.name.as_ref(),
-            Scope::Block(ref blk) => blk.name.as_ref(),
+            Scope::Match(ref mat) => mat.borrow().name.clone(),
+            Scope::Block(ref blk) => blk.borrow().name.clone(),
         }
     }
 }
@@ -72,7 +73,7 @@ impl Pattern {
 
 pub struct Grammar {
     pub repository: Rc<HashMap<String, Scope>>,
-    pub global: Rc<Block>,
+    pub global: Rc<RefCell<Block>>,
 }
 
 // pub struct Builder {
@@ -134,11 +135,11 @@ impl Tokenizer {
             (self.grammar.global.clone(), None)
         } else {
             let block = self.states.top().block.clone();
-            let result = block.end.find(line);
+            let result = block.borrow().end.find(line);
             (block, result)
         };
 
-        let matched = block.subscopes
+        let matched = block.borrow().subscopes
             .iter()
             .filter_map(|scope| {
                 let scope = if let Scope::Include(ref inc) = *scope {
@@ -153,10 +154,10 @@ impl Tokenizer {
                 match *scope {
                     Scope::Include(_) => panic!("Unreachable"),
                     Scope::Match(ref mat) => {
-                        mat.pat.find(line).map(|m| (Matched::Sub(scope.clone()), m))
+                        mat.borrow().pat.find(line).map(|m| (Matched::Sub(scope.clone()), m))
                     }
                     Scope::Block(ref blk) => {
-                        blk.begin.find(line).map(|m| (Matched::Sub(scope.clone()), m))
+                        blk.borrow().begin.find(line).map(|m| (Matched::Sub(scope.clone()), m))
                     }
                 }
             })
@@ -182,7 +183,7 @@ impl Tokenizer {
                         Token(offset + start, offset + end, name.clone())
                     })
                     .collect();
-                if let Some(name) = block.name.as_ref() {
+                if let Some(name) = block.borrow().name.as_ref() {
                     tokens.push(Token(self.states.top().pos, offset + m.end, name.clone()));
                 }
                 self.states.pop();
@@ -239,7 +240,7 @@ impl States {
 }
 
 struct MatchState {
-    block: Rc<Block>,
+    block: Rc<RefCell<Block>>,
     pos: usize,
 
     #[allow(dead_code)]
@@ -247,7 +248,7 @@ struct MatchState {
 }
 
 impl MatchState {
-    fn new(block: Rc<Block>, pos: usize, captured: HashMap<usize, String>) -> MatchState {
+    fn new(block: Rc<RefCell<Block>>, pos: usize, captured: HashMap<usize, String>) -> MatchState {
         MatchState {
             block,
             pos,
