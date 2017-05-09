@@ -50,7 +50,7 @@ impl Pattern {
                         .as_ref()
                         .map(|pats| {
                             pats.iter()
-                                .map(|pat| pat.compact())
+                                .map(|pat| pat.compact().downgrade())
                                 .collect()
                         })
                         .unwrap_or_default(),
@@ -128,15 +128,21 @@ impl Syntax {
             .iter()
             .map(|(name, pat)| (name.clone(), pat.compact()))
             .collect::<HashMap<String, tokenizer::Scope>>();
+        let unnamed: Vec<_> = self.patterns
+            .iter()
+            .map(|pat| pat.compact())
+            .collect();
+
         tokenizer::Grammar {
             repository: repos.clone().into(),
+            unnamed_repos: unnamed.clone(),
             global: Rc::new(RefCell::new(tokenizer::Block {
                     name: None,
                     begin: tokenizer::Pattern::empty(),
                     end: tokenizer::Pattern::empty(),
-                    subscopes: self.patterns
+                    subscopes: unnamed
                         .iter()
-                        .map(|pat| pat.compact())
+                        .map(|scope| scope.downgrade())
                         .collect(),
                 })),
         }
