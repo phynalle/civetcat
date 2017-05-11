@@ -1,7 +1,6 @@
 use std::io::Result;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::fs::File;
 use std::collections::HashMap;
 
 use serde_json;
@@ -22,7 +21,7 @@ impl Pattern {
             Pattern::Include(ref p) => {
                 let path = &p.include[1..];
                 if d.cache.contains_key(path) {
-                    return *d.cache.get(path).unwrap();
+                    return d.cache[path];
                 }
                 if !d.repos.contains_key(path) {
                     panic!("Pattern not found: {}", p.include);
@@ -77,12 +76,7 @@ pub struct Syntax {
 }
 
 impl Syntax {
-    pub fn new(filename: &str) -> Result<Syntax> {
-        let file = File::open(filename)?;
-        Ok(serde_json::from_reader(file).unwrap())
-    }
-
-    pub fn from_str(text: &str) -> Result<Syntax> {
+    pub fn from_text(text: &str) -> Result<Syntax> {
         Ok(serde_json::from_str(text).unwrap())
     }
 

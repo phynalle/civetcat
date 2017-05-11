@@ -20,7 +20,7 @@ impl Pipeline {
     #[allow(dead_code)]
     pub fn process(&mut self, text: &str) -> String {
         let mut tok = Tokenizer::new(self.grammar.clone());
-        let colored = text.lines()
+        text.lines()
             .map(|line| (line, tok.tokenize(line)))
             .map(|(line, tokens)| {
                 let mut v: Vec<_> = tokens.into_iter()
@@ -46,8 +46,7 @@ impl Pipeline {
                 s.push('\n');
                 s
             })
-            .collect::<String>();
-        colored
+            .collect::<String>()
     }
 
     pub fn process_line(&mut self, line: &str) -> String {

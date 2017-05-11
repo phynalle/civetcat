@@ -93,7 +93,7 @@ fn func_name(lang: &str) -> String {
 fn gen_load_func(_fn: &str, _func: &str) -> String {
     format!(
 "fn {}() -> Result<Grammar> {{
-    let syntax = Syntax::from_str({})?;
+    let syntax = Syntax::from_text({})?;
     Ok(syntax.compact())
 }}
 ", _fn, _func)
