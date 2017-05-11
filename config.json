@@ -2,14 +2,14 @@
     "languages":[
         {
             "name":"Rust",
-            "path":"rust.json",
+            "path":"syntaxes/rust.json",
             "extensions":[
                 "rs"
             ]
         },
         {
             "name":"Go",
-            "path":"go.json",
+            "path":"syntaxes/go.json",
             "extensions":[
                 "go"
             ]

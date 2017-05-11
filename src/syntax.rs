@@ -82,6 +82,10 @@ impl Syntax {
         Ok(serde_json::from_reader(file).unwrap())
     }
 
+    pub fn from_str(text: &str) -> Result<Syntax> {
+        Ok(serde_json::from_str(text).unwrap())
+    }
+
     fn new_node_from_match<'a>(p: &Match, d: &mut Delivery<'a>) -> tokenizer::ScopeId {
         let m = tokenizer::Match {
             name: p.scope.clone(),

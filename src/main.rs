@@ -22,6 +22,7 @@ mod syntax;
 mod colorizer;
 mod pipeline;
 mod tokenizer;
+mod _generated;
 
 use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
