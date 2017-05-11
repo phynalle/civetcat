@@ -72,26 +72,24 @@ impl<'a> SimpleTokenizer<'a> {
         let (start, end) = (self.pos, self.pos + len);
         self.pos += len;
         Some(Token {
-            ttype: ttype,
-            start: start,
-            end: end,
-            text: &self.text[start..end],
-        })
+                 ttype: ttype,
+                 start: start,
+                 end: end,
+                 text: &self.text[start..end],
+             })
     }
 
     fn parse_word(&self) -> Option<(TokenType, usize)> {
         // keywords list would be better if it could be allocated as static
-        let mut keywords = vec![
-            "abstract", "alignof", "as", "become", "box", "break", "const",
-            "continue", "crate", "do", "else","enum", "extern", "false",
-            "final", "fn", "for", "if", "impl", "in", "let", "loop", "macro",
-            "match", "mod", "move", "mut", "offsetof", "override", "priv", "proc",
-            "pub", "pure", "ref", "return", "Self", "self", "sizeof", "static", "struct",
-            "super", "trait", "true", "type", "typeof", "unsafe", "unsized",
-            "use", "virtual", "where", "while", "yield",
-            "i8", "i16", "i32", "i64", "isize", "u8", "u16", "u32", "u64", "usize", "f32", "f64",
-            "Some", "None", "Ok", "Err", "Option", "Result", "Vec", "Box", "String",
-        ];
+        let mut keywords =
+            vec!["abstract", "alignof", "as", "become", "box", "break", "const", "continue",
+                 "crate", "do", "else", "enum", "extern", "false", "final", "fn", "for", "if",
+                 "impl", "in", "let", "loop", "macro", "match", "mod", "move", "mut", "offsetof",
+                 "override", "priv", "proc", "pub", "pure", "ref", "return", "Self", "self",
+                 "sizeof", "static", "struct", "super", "trait", "true", "type", "typeof",
+                 "unsafe", "unsized", "use", "virtual", "where", "while", "yield", "i8", "i16",
+                 "i32", "i64", "isize", "u8", "u16", "u32", "u64", "usize", "f32", "f64", "Some",
+                 "None", "Ok", "Err", "Option", "Result", "Vec", "Box", "String"];
         keywords.sort();
 
         let word: String = self.text
@@ -151,7 +149,11 @@ impl<'a> SimpleTokenizer<'a> {
     }
 
     fn parse_number(&self) -> Option<usize> {
-        let len = self.text.chars().skip(self.pos).take_while(|c| c.is_digit(10)).count();
+        let len = self.text
+            .chars()
+            .skip(self.pos)
+            .take_while(|c| c.is_digit(10))
+            .count();
         if len == 0 { None } else { Some(len) }
     }
 
@@ -165,7 +167,11 @@ impl<'a> SimpleTokenizer<'a> {
         let text = &self.text;
 
         if op == "//" {
-            let len = self.text.chars().skip(pos).take_while(|&c| c != '\n').count();
+            let len = self.text
+                .chars()
+                .skip(pos)
+                .take_while(|&c| c != '\n')
+                .count();
             Some(len)
         } else if op == "/*" {
             pos += 2;

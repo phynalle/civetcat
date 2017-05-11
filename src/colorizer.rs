@@ -95,7 +95,7 @@ pub struct ScopeTree {
 
 impl ScopeTree {
     pub fn new(style: Style) -> ScopeTree {
-        ScopeTree { 
+        ScopeTree {
             root: Node::new(Style::empty()),
             global_style: style,
         }
@@ -109,7 +109,8 @@ impl ScopeTree {
             if scope.scope.is_none() {
                 continue;
             }
-            let scope_names: Vec<_> = scope.scope
+            let scope_names: Vec<_> = scope
+                .scope
                 .as_ref()
                 .unwrap()
                 .as_str()
@@ -131,8 +132,7 @@ impl ScopeTree {
 
     pub fn get(&self, key: &str) -> Option<Style> {
         let keys: Vec<_> = key.split('.').collect();
-        self.root
-            .get(&keys)
+        self.root.get(&keys)
     }
 
     // fn print_debug(&self) {

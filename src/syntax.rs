@@ -31,7 +31,7 @@ impl Pattern {
                     Pattern::Match(ref pp) => Syntax::new_node_from_match2(pp, d, path.to_owned()),
                     Pattern::Block(ref pp) => Syntax::new_node_from_block2(pp, d, path.to_owned()),
                 }
-            },
+            }
             Pattern::Match(ref p) => Syntax::new_node_from_match(p, d),
             Pattern::Block(ref p) => Syntax::new_node_from_block(p, d),
         }
@@ -88,10 +88,10 @@ impl Syntax {
                 captures: p.captures
                     .as_ref()
                     .map(|caps| {
-                        caps.iter()
-                            .map(|(key, val)| (key.to_string(), val.name.clone()))
-                            .collect()
-                    })
+                             caps.iter()
+                                 .map(|(key, val)| (key.to_string(), val.name.clone()))
+                                 .collect()
+                         })
                     .unwrap_or_default(),
             },
         };
@@ -109,10 +109,10 @@ impl Syntax {
                 captures: p.begin_captures
                     .as_ref()
                     .map(|caps| {
-                        caps.iter()
-                            .map(|(key, val)| (key.to_string(), val.name.clone()))
-                            .collect()
-                    })
+                             caps.iter()
+                                 .map(|(key, val)| (key.to_string(), val.name.clone()))
+                                 .collect()
+                         })
                     .unwrap_or_default(),
             },
             end: tokenizer::Pattern {
@@ -120,10 +120,10 @@ impl Syntax {
                 captures: p.end_captures
                     .as_ref()
                     .map(|caps| {
-                        caps.iter()
-                            .map(|(key, val)| (key.to_string(), val.name.clone()))
-                            .collect()
-                    })
+                             caps.iter()
+                                 .map(|(key, val)| (key.to_string(), val.name.clone()))
+                                 .collect()
+                         })
                     .unwrap_or_default(),
             },
             subscopes: Vec::new(),
@@ -134,23 +134,25 @@ impl Syntax {
         id
     }
 
-    fn new_node_from_match2<'a>(p: &Match, d: &mut Delivery<'a>, path: String) -> tokenizer::ScopeId {
+    fn new_node_from_match2<'a>(p: &Match,
+                                d: &mut Delivery<'a>,
+                                path: String)
+                                -> tokenizer::ScopeId {
         let id = Syntax::new_node_from_match(p, d);
         d.cache.insert(path, id);
         id
     }
 
-    fn new_node_from_block2<'a>(p: &Block, d: &mut Delivery<'a>, path: String) -> tokenizer::ScopeId {
+    fn new_node_from_block2<'a>(p: &Block,
+                                d: &mut Delivery<'a>,
+                                path: String)
+                                -> tokenizer::ScopeId {
         let id = Syntax::new_node_from_block(p, d);
         d.cache.insert(path, id);
         let v = p.patterns
-                .as_ref()
-                .map(|pats| {
-                    pats.iter()
-                        .map(|pat| pat.compact(d))
-                        .collect()
-                })
-                .unwrap_or_default();
+            .as_ref()
+            .map(|pats| pats.iter().map(|pat| pat.compact(d)).collect())
+            .unwrap_or_default();
         if let tokenizer::Scope::Block(ref blk) = d.nodes[id] {
             blk.borrow_mut().subscopes = v;
         }
@@ -173,13 +175,13 @@ impl Syntax {
             repository: HashMap::new().into(),
             scopes: d.nodes,
             global: Rc::new(RefCell::new(tokenizer::Block {
-                    name: None,
-                    begin: tokenizer::Pattern::empty(),
-                    end: tokenizer::Pattern::empty(),
-                    subscopes: scopes,
-            }))
+                                             name: None,
+                                             begin: tokenizer::Pattern::empty(),
+                                             end: tokenizer::Pattern::empty(),
+                                             subscopes: scopes,
+                                         })),
         }
-        
+
     }
 }
 

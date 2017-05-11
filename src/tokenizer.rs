@@ -61,10 +61,10 @@ impl Pattern {
                 }
             }
             Some(MatchResult {
-                start: m.group_start(0),
-                end: m.group_end(0),
-                captured: captured,
-            })
+                     start: m.group_start(0),
+                     end: m.group_end(0),
+                     captured: captured,
+                 })
         } else {
             None
         }
@@ -140,19 +140,25 @@ impl Tokenizer {
             (block, result)
         };
 
-        let matched = block.borrow().subscopes
+        let matched = block
+            .borrow()
+            .subscopes
             .iter()
-            .map(|id| {
-                self.grammar.scopes[*id].clone()
-            })
+            .map(|id| self.grammar.scopes[*id].clone())
             .filter_map(|scope| {
                 // let scope = scope.upgrade();
                 match scope {
                     Scope::Match(ref mat) => {
-                        mat.borrow().pat.find(line).map(|m| (Matched::Sub(scope.clone()), m))
+                        mat.borrow()
+                            .pat
+                            .find(line)
+                            .map(|m| (Matched::Sub(scope.clone()), m))
                     }
                     Scope::Block(ref blk) => {
-                        blk.borrow().begin.find(line).map(|m| (Matched::Sub(scope.clone()), m))
+                        blk.borrow()
+                            .begin
+                            .find(line)
+                            .map(|m| (Matched::Sub(scope.clone()), m))
                     }
                 }
             })
@@ -175,8 +181,8 @@ impl Tokenizer {
                 let mut tokens: Vec<Token> = m.captured
                     .iter()
                     .map(|&(_, start, end, ref name)| {
-                        Token(offset + start, offset + end, name.clone())
-                    })
+                             Token(offset + start, offset + end, name.clone())
+                         })
                     .collect();
                 if let Some(name) = block.borrow().name.as_ref() {
                     tokens.push(Token(self.states.top().pos, offset + m.end, name.clone()));
@@ -188,15 +194,16 @@ impl Tokenizer {
                 let mut tokens: Vec<Token> = m.captured
                     .iter()
                     .map(|&(_, start, end, ref name)| {
-                        Token(offset + start, offset + end, name.clone())
-                    })
+                             Token(offset + start, offset + end, name.clone())
+                         })
                     .collect();
                 if let Scope::Block(ref blk) = *scope {
                     let backref = m.captured
                         .iter()
                         .map(|&(i, begin, end, _)| (i, line[begin..end].to_string()))
                         .collect();
-                    self.states.push(MatchState::new(blk.clone(), offset + m.start, backref));
+                    self.states
+                        .push(MatchState::new(blk.clone(), offset + m.start, backref));
                 } else if let Some(name) = scope.name() {
                     tokens.insert(0, Token(offset + m.start, offset + m.end, name.clone()));
                 }

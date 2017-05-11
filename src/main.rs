@@ -71,12 +71,14 @@ fn run(mut parsed: Parsed) {
                         .and_then(|ext| ext.to_str())
                         .and_then(|ext| lang::identify(ext))
                         .map(|ln| ll.load_grammar(ln));
-                        
+
                     match grammar {
-                        Some(g) => printer.print(file, |s| {
-                            let mut pl = Pipeline::new(g.clone());
-                            pl.process_line(s)
-                        }),
+                        Some(g) => {
+                            printer.print(file, |s| {
+                                let mut pl = Pipeline::new(g.clone());
+                                pl.process_line(s)
+                            })
+                        }
                         None => printer.print(file, |s| s.to_owned()),
                     }
                 }
@@ -97,7 +99,11 @@ fn print_error(err: &str) {
 fn get_exe_name() -> String {
     std::env::current_exe()
         .ok()
-        .and_then(|p| p.file_name().and_then(|s| s.to_str()).map(|s| s.to_string()))
+        .and_then(|p| {
+                      p.file_name()
+                          .and_then(|s| s.to_str())
+                          .map(|s| s.to_string())
+                  })
         .unwrap_or_else(|| EXECUTABLE_NAME.to_owned())
 }
 
@@ -134,9 +140,7 @@ struct ColorPrinter {
 
 impl ColorPrinter {
     fn new(options: Options) -> ColorPrinter {
-        ColorPrinter {
-            options,
-        }
+        ColorPrinter { options }
     }
 
     fn print<R: Read, F: Fn(&str) -> String>(&mut self, r: R, f: F) {
@@ -153,13 +157,13 @@ impl ColorPrinter {
                         n -= 1;
                         if line.ends_with("\r\n") {
                             n -= 1;
-                        } 
-                    }                       
+                        }
+                    }
                     line.split_at(n)
                 }
-                Err(e) => panic!("{}", e), 
+                Err(e) => panic!("{}", e),
             };
-            
+
             let text = f(text);
             if self.options.display_number {
                 let _ = o.write_fmt(format_args!("{:6}\t", line_num));
@@ -170,4 +174,3 @@ impl ColorPrinter {
         let _ = o.flush();
     }
 }
-
