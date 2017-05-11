@@ -49,7 +49,7 @@ fn main() {
 
         raw.push_str(&format!("const {}: &'static str = \"{}\";\n", _raw, read_file(&lang.path)));
         lg.push_str(&format!("        \"{}\" => {}(),\n", lang.name, _fn));
-        func.push_str(&format_func(&_fn, &_raw));
+        func.push_str(&gen_load_func(&_fn, &_raw));
         for e in lang.extensions {
             ext.push_str(&format!("        m.insert(\"{}\", \"{}\");\n", e, lang.name));
         }
@@ -90,7 +90,7 @@ fn func_name(lang: &str) -> String {
     format!("_load_{}_grammar", lang.to_lowercase())
 }
 
-fn format_func(_fn: &str, _func: &str) -> String {
+fn gen_load_func(_fn: &str, _func: &str) -> String {
     format!(
 "fn {}() -> Result<Grammar> {{
     let syntax = Syntax::from_str({})?;
