@@ -11,71 +11,30 @@ use tokenizer;
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
 enum Pattern {
-    Root(Syntax),
     Include(Include),
     Match(Match),
     Block(Block),
 }
 
 impl Pattern {
-    fn compact(&self) -> tokenizer::Scope {
+    fn compact<'a>(&self, d: &mut Delivery<'a>) -> usize {
         match *self {
-            Pattern::Include(ref p) => tokenizer::Scope::Include(p.include.clone()),
-            Pattern::Block(ref p) => {
-                let b = tokenizer::Block {
-                    name: p.scope.clone(),
-                    begin: tokenizer::Pattern {
-                        pattern: p.begin.clone(),
-                        captures: p.begin_captures
-                            .as_ref()
-                            .map(|caps| {
-                                caps.iter()
-                                    .map(|(key, val)| (key.to_string(), val.name.clone()))
-                                    .collect()
-                            })
-                            .unwrap_or_default(),
-                    },
-                    end: tokenizer::Pattern {
-                        pattern: p.end.clone(),
-                        captures: p.end_captures
-                            .as_ref()
-                            .map(|caps| {
-                                caps.iter()
-                                    .map(|(key, val)| (key.to_string(), val.name.clone()))
-                                    .collect()
-                            })
-                            .unwrap_or_default(),
-                    },
-                    subscopes: p.patterns
-                        .as_ref()
-                        .map(|pats| {
-                            pats.iter()
-                                .map(|pat| pat.compact().downgrade())
-                                .collect()
-                        })
-                        .unwrap_or_default(),
-                };
-                tokenizer::Scope::Block(Rc::new(RefCell::new(b)))
-
-            }
-            Pattern::Match(ref p) => {
-                let m = tokenizer::Match {
-                    name: p.scope.clone(),
-                    pat: tokenizer::Pattern {
-                        pattern: p.pattern.clone(),
-                        captures: p.captures
-                            .as_ref()
-                            .map(|caps| {
-                                caps.iter()
-                                    .map(|(key, val)| (key.to_string(), val.name.clone()))
-                                    .collect()
-                            })
-                            .unwrap_or_default(),
-                    },
-                };
-                tokenizer::Scope::Match(Rc::new(RefCell::new(m)))
-            }
-            _ => panic!("unreachable"),
+            Pattern::Include(ref p) => {
+                let path = &p.include[1..];
+                if d.cache.contains_key(path) {
+                    return *d.cache.get(path).unwrap();
+                }
+                if !d.repos.contains_key(path) {
+                    panic!("Pattern not found: {}", p.include);
+                }
+                match *d.repos.get(path).unwrap() {
+                    Pattern::Include(_) => panic!("Too deep"),
+                    Pattern::Match(ref pp) => Syntax::new_node_from_match2(pp, d, path.to_owned()),
+                    Pattern::Block(ref pp) => Syntax::new_node_from_block2(pp, d, path.to_owned()),
+                }
+            },
+            Pattern::Match(ref p) => Syntax::new_node_from_match(p, d),
+            Pattern::Block(ref p) => Syntax::new_node_from_block(p, d),
         }
     }
 }
@@ -123,29 +82,106 @@ impl Syntax {
         Ok(serde_json::from_reader(file).unwrap())
     }
 
+    fn new_node_from_match<'a>(p: &Match, d: &mut Delivery<'a>) -> tokenizer::ScopeId {
+        let m = tokenizer::Match {
+            name: p.scope.clone(),
+            pat: tokenizer::Pattern {
+                pattern: p.pattern.clone(),
+                captures: p.captures
+                    .as_ref()
+                    .map(|caps| {
+                        caps.iter()
+                            .map(|(key, val)| (key.to_string(), val.name.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            },
+        };
+        let m = tokenizer::Scope::Match(Rc::new(RefCell::new(m)));
+        let id = d.nodes.len();
+        d.nodes.push(m);
+        id
+    }
+
+    fn new_node_from_block<'a>(p: &Block, d: &mut Delivery<'a>) -> tokenizer::ScopeId {
+        let b = tokenizer::Block {
+            name: p.scope.clone(),
+            begin: tokenizer::Pattern {
+                pattern: p.begin.clone(),
+                captures: p.begin_captures
+                    .as_ref()
+                    .map(|caps| {
+                        caps.iter()
+                            .map(|(key, val)| (key.to_string(), val.name.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            },
+            end: tokenizer::Pattern {
+                pattern: p.end.clone(),
+                captures: p.end_captures
+                    .as_ref()
+                    .map(|caps| {
+                        caps.iter()
+                            .map(|(key, val)| (key.to_string(), val.name.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            },
+            subscopes: Vec::new(),
+        };
+        let b = tokenizer::Scope::Block(Rc::new(RefCell::new(b)));
+        let id = d.nodes.len();
+        d.nodes.push(b);
+        id
+    }
+
+    fn new_node_from_match2<'a>(p: &Match, d: &mut Delivery<'a>, path: String) -> tokenizer::ScopeId {
+        let id = Syntax::new_node_from_match(p, d);
+        d.cache.insert(path, id);
+        id
+    }
+
+    fn new_node_from_block2<'a>(p: &Block, d: &mut Delivery<'a>, path: String) -> tokenizer::ScopeId {
+        let id = Syntax::new_node_from_block(p, d);
+        d.cache.insert(path, id);
+        let v = p.patterns
+                .as_ref()
+                .map(|pats| {
+                    pats.iter()
+                        .map(|pat| pat.compact(d))
+                        .collect()
+                })
+                .unwrap_or_default();
+        if let tokenizer::Scope::Block(ref blk) = d.nodes[id] {
+            blk.borrow_mut().subscopes = v;
+        }
+        id
+    }
+
     pub fn compact(&self) -> tokenizer::Grammar {
-        let repos = self.repository
+        let mut d = Delivery {
+            nodes: Vec::new(),
+            cache: HashMap::new(),
+            repos: &self.repository,
+        };
+
+        let scopes = self.patterns
             .iter()
-            .map(|(name, pat)| (name.clone(), pat.compact()))
-            .collect::<HashMap<String, tokenizer::Scope>>();
-        let unnamed: Vec<_> = self.patterns
-            .iter()
-            .map(|pat| pat.compact())
-            .collect();
+            .map(|p| p.compact(&mut d))
+            .collect::<Vec<_>>();
 
         tokenizer::Grammar {
-            repository: repos.clone().into(),
-            unnamed_repos: unnamed.clone(),
+            repository: HashMap::new().into(),
+            scopes: d.nodes,
             global: Rc::new(RefCell::new(tokenizer::Block {
                     name: None,
                     begin: tokenizer::Pattern::empty(),
                     end: tokenizer::Pattern::empty(),
-                    subscopes: unnamed
-                        .iter()
-                        .map(|scope| scope.downgrade())
-                        .collect(),
-                })),
+                    subscopes: scopes,
+            }))
         }
+        
     }
 }
 
@@ -160,4 +196,10 @@ type Captures = Option<HashMap<String, Capture>>;
 pub struct Token {
     text: String,
     pub captures: Vec<(usize, usize, String)>,
+}
+
+struct Delivery<'a> {
+    nodes: Vec<tokenizer::Scope>,
+    cache: HashMap<String, usize>,
+    repos: &'a HashMap<String, Pattern>,
 }

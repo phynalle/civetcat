@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 use pcre::Pcre;
 
+pub type ScopeId = usize;
+
 #[derive(Debug, Clone)]
 pub enum Scope {
-    Include(String),
     Match(Rc<RefCell<Match>>),
     Block(Rc<RefCell<Block>>),
 }
@@ -14,34 +15,8 @@ pub enum Scope {
 impl Scope {
     fn name(&self) -> Option<String> {
         match *self {
-            Scope::Include(_) => None,
             Scope::Match(ref mat) => mat.borrow().name.clone(),
             Scope::Block(ref blk) => blk.borrow().name.clone(),
-        }
-    }
-
-    pub fn downgrade(&self) -> WeakScope {
-        match *self {
-            Scope::Include(ref inc) => WeakScope::Include(inc.clone()),
-            Scope::Match(ref mat) => WeakScope::Match(Rc::downgrade(mat)),
-            Scope::Block(ref blk) => WeakScope::Block(Rc::downgrade(blk)),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum WeakScope {
-    Include(String),
-    Match(Weak<RefCell<Match>>),
-    Block(Weak<RefCell<Block>>),
-}
-
-impl WeakScope {
-    fn upgrade(&self) -> Scope {
-        match *self {
-            WeakScope::Include(ref inc) => Scope::Include(inc.clone()),
-            WeakScope::Match(ref mat) => Scope::Match(mat.upgrade().unwrap()),
-            WeakScope::Block(ref blk) => Scope::Block(blk.upgrade().unwrap()),
         }
     }
 }
@@ -57,7 +32,7 @@ pub struct Block {
     pub name: Option<String>,
     pub begin: Pattern,
     pub end: Pattern,
-    pub subscopes: Vec<WeakScope>,
+    pub subscopes: Vec<ScopeId>,
 }
 
 #[derive(Debug, Clone)]
@@ -98,7 +73,7 @@ impl Pattern {
 
 pub struct Grammar {
     pub repository: Rc<HashMap<String, Scope>>,
-    pub unnamed_repos: Vec<Scope>,
+    pub scopes: Vec<Scope>,
     pub global: Rc<RefCell<Block>>,
 }
 
@@ -167,19 +142,12 @@ impl Tokenizer {
 
         let matched = block.borrow().subscopes
             .iter()
+            .map(|id| {
+                self.grammar.scopes[*id].clone()
+            })
             .filter_map(|scope| {
-                let scope = scope.upgrade();
-                let scope = if let Scope::Include(ref inc) = scope {
-                     if inc.starts_with('#') {
-                         self.grammar.repository.get(&inc[1..]).unwrap().clone()
-                    } else {
-                        panic!(format!("Yet unimplemented: including : {}", inc));
-                    }
-                } else {
-                    scope
-                };
+                // let scope = scope.upgrade();
                 match scope {
-                    Scope::Include(_) => panic!("Unreachable"),
                     Scope::Match(ref mat) => {
                         mat.borrow().pat.find(line).map(|m| (Matched::Sub(scope.clone()), m))
                     }
