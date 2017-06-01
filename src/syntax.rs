@@ -12,7 +12,13 @@ use tokenizer;
 enum Pattern {
     Include(Include),
     Match(Match),
+    Patterns(Patterns),
     Block(Block),
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct Patterns {
+    pub patterns: Vec<Pattern>,
 }
 
 impl Pattern {
@@ -30,10 +36,12 @@ impl Pattern {
                     Pattern::Include(_) => panic!("Too deep"),
                     Pattern::Match(ref pp) => Syntax::new_node_from_match2(pp, d, path.to_owned()),
                     Pattern::Block(ref pp) => Syntax::new_node_from_block2(pp, d, path.to_owned()),
+                    Pattern::Patterns(ref pp) => Syntax::new_node_from_patterns2(pp, d, path.to_owned()),
                 }
             }
             Pattern::Match(ref p) => Syntax::new_node_from_match(p, d),
             Pattern::Block(ref p) => Syntax::new_node_from_block(p, d),
+            Pattern::Patterns(ref p) => Syntax::new_node_from_patterns(p, d),
         }
     }
 }
@@ -50,8 +58,8 @@ struct Block {
     scope: Option<String>,
     begin: String,
     end: String,
-    begin_captures: Captures,
-    end_captures: Captures,
+    begin_captures: Option<Captures>,
+    end_captures: Option<Captures>,
     patterns: Option<Vec<Pattern>>,
 }
 
@@ -61,7 +69,7 @@ struct Match {
     scope: Option<String>,
     #[serde(rename = "match")]
     pattern: String,
-    captures: Captures,
+    captures: Option<Captures>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -88,10 +96,20 @@ impl Syntax {
                 captures: p.captures
                     .as_ref()
                     .map(|caps| {
-                             caps.iter()
+                        match *caps {
+                            Captures::Map(ref m) => {
+                                m.iter()
                                  .map(|(key, val)| (key.to_string(), val.name.clone()))
                                  .collect()
-                         })
+                            },
+                            Captures::List(ref v) => {
+                                assert!(!v.is_empty());
+                                let mut h = HashMap::new();
+                                h.insert("0".to_owned(), v[0].name.clone());
+                                h
+                            }
+                        }
+                    })
                     .unwrap_or_default(),
             },
         };
@@ -109,10 +127,20 @@ impl Syntax {
                 captures: p.begin_captures
                     .as_ref()
                     .map(|caps| {
-                             caps.iter()
+                            match *caps {
+                            Captures::Map(ref m) => {
+                                m.iter()
                                  .map(|(key, val)| (key.to_string(), val.name.clone()))
                                  .collect()
-                         })
+                            },
+                            Captures::List(ref v) => {
+                                assert!(!v.is_empty());
+                                let mut h = HashMap::new();
+                                h.insert("0".to_owned(), v[0].name.clone());
+                                h
+                            }
+                        }
+                    })
                     .unwrap_or_default(),
             },
             end: tokenizer::Pattern {
@@ -120,15 +148,33 @@ impl Syntax {
                 captures: p.end_captures
                     .as_ref()
                     .map(|caps| {
-                             caps.iter()
+                        match *caps {
+                            Captures::Map(ref m) => {
+                                m.iter()
                                  .map(|(key, val)| (key.to_string(), val.name.clone()))
                                  .collect()
-                         })
+                            },
+                            Captures::List(ref v) => {
+                                assert!(!v.is_empty());
+                                let mut h = HashMap::new();
+                                h.insert("0".to_owned(), v[0].name.clone());
+                                h
+                            }
+                        }
+                    })
                     .unwrap_or_default(),
             },
             subscopes: Vec::new(),
         };
         let b = tokenizer::Scope::Block(Rc::new(RefCell::new(b)));
+        let id = d.nodes.len();
+        d.nodes.push(b);
+        id
+    }
+
+    fn new_node_from_patterns<'a>(p: &Patterns, d: &mut Delivery<'a>) -> tokenizer::ScopeId {
+        let b = tokenizer::Patterns { subscopes: Vec::new() };
+        let b = tokenizer::Scope::Patterns(Rc::new(RefCell::new(b)));
         let id = d.nodes.len();
         d.nodes.push(b);
         id
@@ -155,6 +201,22 @@ impl Syntax {
             .unwrap_or_default();
         if let tokenizer::Scope::Block(ref blk) = d.nodes[id] {
             blk.borrow_mut().subscopes = v;
+        }
+        id
+    }
+
+    fn new_node_from_patterns2<'a>(p: &Patterns,
+                                d: &mut Delivery<'a>,
+                                path: String)
+                                -> tokenizer::ScopeId {
+        let id = Syntax::new_node_from_patterns(p, d);
+        d.cache.insert(path, id);
+        let v = p.patterns
+            .iter()
+            .map(|pat| pat.compact(d))
+            .collect();
+        if let tokenizer::Scope::Patterns(ref ptrns) = d.nodes[id] {
+            ptrns.borrow_mut().subscopes = v;
         }
         id
     }
@@ -190,7 +252,12 @@ struct Capture {
     name: String,
 }
 
-type Captures = Option<HashMap<String, Capture>>;
+#[derive(Deserialize, Debug, Clone)]
+#[serde(untagged)]
+enum Captures {
+    Map(HashMap<String, Capture>),
+    List(Vec<Capture>),
+}
 
 #[derive(Clone, Debug)]
 pub struct Token {

@@ -10,6 +10,7 @@ pub type ScopeId = usize;
 pub enum Scope {
     Match(Rc<RefCell<Match>>),
     Block(Rc<RefCell<Block>>),
+    Patterns(Rc<RefCell<Patterns>>),
 }
 
 impl Scope {
@@ -17,6 +18,7 @@ impl Scope {
         match *self {
             Scope::Match(ref mat) => mat.borrow().name.clone(),
             Scope::Block(ref blk) => blk.borrow().name.clone(),
+            _ => None,
         }
     }
 }
@@ -33,6 +35,11 @@ pub struct Block {
     pub begin: Pattern,
     pub end: Pattern,
     pub subscopes: Vec<ScopeId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Patterns {
+    pub subscopes: Vec<ScopeId>, 
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +78,10 @@ impl Pattern {
     }
 }
 
+trait MultiPattern {
+    fn scopes(&self) -> &Vec<ScopeId>;
+}
+
 pub struct Grammar {
     pub repository: Rc<HashMap<String, Scope>>,
     pub scopes: Vec<Scope>,
@@ -105,6 +116,11 @@ pub struct Tokenizer {
     states: States,
 }
 
+enum MatchScope {
+    Sub(Scope),
+    End,
+}
+
 impl Tokenizer {
     pub fn new(grammar: Rc<Grammar>) -> Tokenizer {
         Tokenizer {
@@ -126,11 +142,39 @@ impl Tokenizer {
         tokens
     }
 
+    fn match_single_pattern(&self, mp: &MultiPattern, text: &str) -> Option<(MatchScope, MatchResult)> {
+        mp
+        .scopes()
+        .into_iter()
+        .map(|id| self.grammar.scopes[*id].clone())
+        .filter_map(|scope| {
+            match scope {
+                Scope::Match(ref mat) => {
+                    mat.borrow()
+                        .pat
+                        .find(text)
+                        .map(|m| (MatchScope::Sub(scope.clone()), m))
+                }
+                Scope::Block(ref blk) => {
+                    blk.borrow()
+                        .begin
+                        .find(text)
+                        .map(|m| (MatchScope::Sub(scope.clone()), m))
+                }
+                Scope::Patterns(ref ptrns) => {
+                    let o = ptrns.borrow();
+                    self.match_single_pattern(&(*o), text)
+                }
+            }
+        })
+        .min_by(|x, y| x.1.start.cmp(&y.1.start))
+    }
+
     fn tokenize_line(&mut self, line: &str, offset: usize) -> Option<(usize, Vec<Token>)> {
-        enum Matched {
+        /* enum Matched {
             Sub(Scope),
             End,
-        };
+        };*/
 
         let (block, end_matched) = if self.states.is_empty() {
             (self.grammar.global.clone(), None)
@@ -140,6 +184,8 @@ impl Tokenizer {
             (block, result)
         };
 
+        let matched = self.match_single_pattern(&*block.borrow(), line);
+        /*
         let matched = block
             .borrow()
             .subscopes
@@ -160,24 +206,25 @@ impl Tokenizer {
                             .find(line)
                             .map(|m| (Matched::Sub(scope.clone()), m))
                     }
+                    Scope::Patterns(ref ptrns) => None,
                 }
             })
             .min_by(|x, y| x.1.start.cmp(&y.1.start));
-
+        */
         let selected = match (end_matched, matched) {
             (Some(end_matched), Some(matched)) => {
                 if end_matched.start <= matched.1.start {
-                    Some((Matched::End, end_matched))
+                    Some((MatchScope::End, end_matched))
                 } else {
                     Some(matched)
                 }
             }
-            (Some(end_matched), None) => Some((Matched::End, end_matched)),
+            (Some(end_matched), None) => Some((MatchScope::End, end_matched)),
             (None, x) => x,
         };
 
         match selected {
-            Some((Matched::End, ref m)) => {
+            Some((MatchScope::End, ref m)) => {
                 let mut tokens: Vec<Token> = m.captured
                     .iter()
                     .map(|&(_, start, end, ref name)| {
@@ -190,7 +237,7 @@ impl Tokenizer {
                 self.states.pop();
                 Some((m.end, tokens))
             }
-            Some((Matched::Sub(ref scope), ref m)) => {
+            Some((MatchScope::Sub(ref scope), ref m)) => {
                 let mut tokens: Vec<Token> = m.captured
                     .iter()
                     .map(|&(_, start, end, ref name)| {
@@ -256,5 +303,17 @@ impl MatchState {
             pos,
             captured,
         }
+    }
+}
+
+impl MultiPattern for Block {
+    fn scopes(&self) -> &Vec<ScopeId> {
+        &self.subscopes
+    }
+}
+
+impl MultiPattern for Patterns {
+    fn scopes(&self) -> &Vec<ScopeId> {
+        &self.subscopes
     }
 }
