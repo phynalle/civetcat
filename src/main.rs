@@ -24,6 +24,8 @@ mod pipeline;
 mod tokenizer;
 mod _generated;
 
+mod syntax2;
+
 use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
 
@@ -38,6 +40,10 @@ struct Parsed {
 }
 
 fn main() {
+    let rule = syntax2::grammar::load_grammars("./syntaxes/go.json");
+    let mut c = syntax2::rule::Compiler::new();
+    c.compile(&mut rule.unwrap());
+    /*
     let args: Vec<_> = std::env::args().skip(1).collect();
     let result = parse_options(args);
 
@@ -49,7 +55,7 @@ fn main() {
                              "usage: {} [-n] [file ...]",
                              get_exe_name());
         }
-    }
+    }*/
 }
 
 fn run(mut parsed: Parsed) {
