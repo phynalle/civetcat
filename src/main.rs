@@ -43,14 +43,13 @@ struct Parsed {
 
 fn main() {
     let rule = syntax2::grammar::load_grammars("./syntaxes/rust.json");
-    let mut c = syntax2::rule::Compiler::new();
+    let c = syntax2::rule::Compiler::new();
     let grammar = c.compile(&mut rule.unwrap());
 
     let mut text = String::new();
     match std::io::stdin().read_to_string(&mut text) {
-        Ok(0) => (),
         Ok(_) => grammar.tokenize_test(&text),
-        Err(_) => (),
+        Ok(0) | Err(_) => (),
     }
     /*
     let args: Vec<_> = std::env::args().skip(1).collect();

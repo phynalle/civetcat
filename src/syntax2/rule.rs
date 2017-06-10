@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-use std::cell::{Cell, RefCell};
-use std::fmt::Debug;
+use std::cell::Cell;
 use std::rc::Rc;
-
-use pcre::Pcre;
 
 use syntax2::grammar::Grammar;
 use syntax2::regex_set::RegexSet;
@@ -19,6 +16,7 @@ pub enum Rule {
 }
 
 impl Rule {
+    #[allow(dead_code)]
     pub fn id(&self) -> RuleId {
         match *self {
             Rule::Include(ref r) => r.id,
@@ -27,12 +25,12 @@ impl Rule {
         }
     }
 
-    pub fn find(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult>{
+    pub fn find(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult> {
         let mut res = Vec::new();
         match *self {
             Rule::Include(ref r) => {
                 for id in &r.patterns {
-                    let mut x = rules[*id].find(text, rules);
+                    let x = rules[*id].find(text, rules);
                     res.extend(x);
                 }
             }
@@ -66,19 +64,19 @@ impl Rule {
         res
     }
 
-    pub fn find_subpattern(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult>{
+    pub fn find_subpattern(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult> {
         let mut res = Vec::new();
         match *self {
             Rule::Include(_) => {
-                let mut x = self.find(text, rules);
+                let x = self.find(text, rules);
                 res.extend(x);
             }
-            Rule::Match(ref r) => {
+            Rule::Match(_) => {
                 panic!("Impossible");
             }
             Rule::BeginEnd(ref r) => {
                 for id in &r.patterns {
-                    let mut x = rules[*id].find(text, rules);
+                    let x = rules[*id].find(text, rules);
                     res.extend(x);
                 }
             }
@@ -128,8 +126,6 @@ struct CaptureRule {
 #[derive(Debug)]
 pub struct CaptureGroup(HashMap<usize, CaptureRule>);
 
-type Patterns = Vec<RuleId>;
-
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RawRule {
@@ -166,7 +162,7 @@ impl Compiler {
         let root_id = self.compile_rule(rule, rule.repository.as_ref().unwrap_or(&repo));
 
         let max_rule_id = *self.rules.keys().max().unwrap();
-        assert!(max_rule_id + 1 == self.rules.len());
+        assert_eq!(max_rule_id + 1, self.rules.len());
 
         let mut rules = Vec::with_capacity(max_rule_id + 1);
         let mut ruless = &mut self.rules;
@@ -190,7 +186,11 @@ impl Compiler {
         rule_id
     }
 
-    fn _create_rule(&mut self, id: RuleId, rule: &RawRule, repo: &HashMap<String, RawRule>) -> Rule {
+    fn _create_rule(&mut self,
+                    id: RuleId,
+                    rule: &RawRule,
+                    repo: &HashMap<String, RawRule>)
+                    -> Rule {
         if rule.match_expr.is_some() {
             let match_rule = MatchRule {
                 id,
@@ -199,7 +199,7 @@ impl Compiler {
                 captures: self.compile_captures(&rule.captures, repo),
             };
             return Rule::Match(match_rule);
-        } 
+        }
 
         if rule.begin.is_none() {
             let include_rule = IncludeRule {
@@ -221,7 +221,10 @@ impl Compiler {
         Rule::BeginEnd(begin_end_rule)
     }
 
-    fn compile_patterns(&mut self, patterns: &Option<Vec<RawRule>>, repo: &HashMap<String, RawRule>) -> Vec<RuleId> {
+    fn compile_patterns(&mut self,
+                        patterns: &Option<Vec<RawRule>>,
+                        repo: &HashMap<String, RawRule>)
+                        -> Vec<RuleId> {
         let mut rules = Vec::new();
         if let Some(ref patterns) = *patterns {
             for pattern in patterns {
@@ -229,9 +232,7 @@ impl Compiler {
                     Some(ref inc) => {
                         if inc.starts_with('#') {
                             match repo.get(&inc[1..]) {
-                                Some(ref rule) => {
-                                    self.compile_rule(rule, repo)
-                                }   
+                                Some(rule) => self.compile_rule(rule, repo),
                                 None => panic!("not found"),
                             }
                         } else if inc == "$base" || inc == "$self" {
@@ -240,28 +241,27 @@ impl Compiler {
                             panic!("unimplemented yet...");
                         }
                     }
-                    None => {
-                        self.compile_rule(pattern, repo)
-                    }
+                    None => self.compile_rule(pattern, repo),
                 };
                 rules.push(rule_id);
-            };
+            }
         }
         rules
     }
 
-    fn compile_captures(&mut self, captures: &Option<HashMap<usize, RawRule>>, repo: &HashMap<String, RawRule>) -> CaptureGroup {
+    fn compile_captures(&mut self,
+                        captures: &Option<HashMap<usize, RawRule>>,
+                        repo: &HashMap<String, RawRule>)
+                        -> CaptureGroup {
         let mut h = HashMap::new();
         if let Some(ref captures) = *captures {
             for (k, v) in captures {
-                let rule_id = v.patterns
-                    .as_ref()
-                    .map(|_| self.compile_rule(v, repo));
+                let rule_id = v.patterns.as_ref().map(|_| self.compile_rule(v, repo));
                 let capture_rule = CaptureRule {
                     name: v.name.clone(),
                     rule_id,
                 };
-                h.insert(k.clone(), capture_rule);
+                h.insert(*k, capture_rule);
             }
         }
         CaptureGroup(h)

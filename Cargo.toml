@@ -9,7 +9,7 @@ name = "cv"
 path = "src/main.rs"
 
 [dependencies]
-clippy = {version = "0.0.131", optional = true}
+clippy = {version = "*", optional = true}
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"

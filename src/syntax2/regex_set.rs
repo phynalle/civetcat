@@ -1,4 +1,3 @@
-use pcre::Pcre;
 use onig::Regex;
 
 /*
@@ -19,14 +18,15 @@ pub struct RegexSet {
 
 impl RegexSet {
     pub fn new() -> RegexSet {
-        RegexSet {
-            srcs: Vec::new(),
-        }
+        RegexSet { srcs: Vec::new() }
     }
 
     pub fn with_patterns(patterns: &[&str]) -> RegexSet {
         RegexSet {
-            srcs: patterns.into_iter().map(|s| RegexSet::_compile_source(s)).collect(),
+            srcs: patterns
+                .into_iter()
+                .map(|s| RegexSet::_compile_source(s))
+                .collect(),
         }
     }
 
@@ -36,20 +36,16 @@ impl RegexSet {
     }
 
     pub fn add(&mut self, pattern: &str) {
-        self.srcs.push(RegexSet::_compile_source(pattern));                
+        self.srcs.push(RegexSet::_compile_source(pattern));
     }
 
     pub fn find(&self, text: &str) -> Vec<MatchResult> {
         self.srcs
             .iter()
             .enumerate()
-            .filter_map(|(i, src)| {
-                src.captures(text).map(|m| (i, m))
-            })
+            .filter_map(|(i, src)| src.captures(text).map(|m| (i, m)))
             .map(|(i, m)| {
-                let groups = (1..m.len())
-                    .filter_map(|i| m.pos(i))
-                    .collect();
+                let groups = (1..m.len()).filter_map(|i| m.pos(i)).collect();
                 let (start, end) = m.pos(0).unwrap();
                 MatchResult {
                     index: i,
