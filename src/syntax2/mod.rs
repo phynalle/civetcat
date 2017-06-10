@@ -3,3 +3,4 @@ extern crate serde_json;
 
 pub mod grammar;
 pub mod rule;
+pub mod regex_set;

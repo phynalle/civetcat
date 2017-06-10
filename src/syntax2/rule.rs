@@ -5,45 +5,127 @@ use std::rc::Rc;
 
 use pcre::Pcre;
 
+use syntax2::grammar::Grammar;
+use syntax2::regex_set::RegexSet;
+
 pub type RuleId = usize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Rule {
     Include(IncludeRule),
     Match(MatchRule),
     BeginEnd(BeginEndRule),
-    Capture(CaptureRule),
+//    Capture(CaptureRule),
 }
 
-#[derive(Debug, Clone)]
+impl Rule {
+    pub fn id(&self) -> RuleId {
+        match *self {
+            Rule::Include(ref r) => r.id,
+            Rule::Match(ref r) => r.id,
+            Rule::BeginEnd(ref r) => r.id,
+        }
+    }
+
+    pub fn find(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult>{
+        let mut res = Vec::new();
+        match *self {
+            Rule::Include(ref r) => {
+                for id in &r.patterns {
+                    let mut x = rules[*id].find(text, rules);
+                    res.extend(x);
+                }
+            }
+            Rule::Match(ref r) => {
+                let mut m = r.match_src.find(text);
+                if !m.is_empty() {
+                    let mr = m.remove(0);
+                    let r = FindResult {
+                        id: r.id,
+                        start: mr.start,
+                        end: mr.end,
+                        groups: mr.groups,
+                    };
+                    res.push(r);
+                }
+            }
+            Rule::BeginEnd(ref r) => {
+                let mut m = r.begin.find(text);
+                if !m.is_empty() {
+                    let mr = m.remove(0);
+                    let r = FindResult {
+                        id: r.id,
+                        start: mr.start,
+                        end: mr.end,
+                        groups: mr.groups,
+                    };
+                    res.push(r);
+                }
+            }
+        }
+        res
+    }
+
+    pub fn find_subpattern(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult>{
+        let mut res = Vec::new();
+        match *self {
+            Rule::Include(_) => {
+                let mut x = self.find(text, rules);
+                res.extend(x);
+            }
+            Rule::Match(ref r) => {
+                panic!("Impossible");
+            }
+            Rule::BeginEnd(ref r) => {
+                for id in &r.patterns {
+                    let mut x = rules[*id].find(text, rules);
+                    res.extend(x);
+                }
+            }
+        }
+        res
+    }
+}
+
+pub struct FindResult {
+    pub id: RuleId,
+    pub start: usize,
+    pub end: usize,
+    pub groups: Vec<(usize, usize)>,
+}
+
+#[derive(Debug)]
 pub struct IncludeRule {
+    pub id: RuleId,
     patterns: Vec<RuleId>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MatchRule {
+    pub id: RuleId,
     pub name: Option<String>,
-    pub match_expr: String,
+    pub match_src: RegexSet,
     pub captures: CaptureGroup,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BeginEndRule {
+    pub id: RuleId,
     pub name: Option<String>,
-    pub begin: String,
+    pub begin: RegexSet,
     pub end: String,
     pub begin_captures: CaptureGroup,
     pub end_captures: CaptureGroup,
     patterns: Vec<RuleId>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct CaptureRule {
     name: Option<String>,
     rule_id: Option<RuleId>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CaptureGroup(HashMap<usize, CaptureRule>);
 
 type Patterns = Vec<RuleId>;
@@ -79,16 +161,20 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self, rule: &mut RawRule) {
-        let h = HashMap::new();
-        self.compile_rule(rule, rule.repository.as_ref().unwrap_or(&h));
+    pub fn compile(mut self, rule: &mut RawRule) -> Grammar {
+        let repo = HashMap::new();
+        let root_id = self.compile_rule(rule, rule.repository.as_ref().unwrap_or(&repo));
 
+        let max_rule_id = *self.rules.keys().max().unwrap();
+        assert!(max_rule_id + 1 == self.rules.len());
 
-        /* let max_rule_id = self.rules.keys().max().unwrap();
         let mut rules = Vec::with_capacity(max_rule_id + 1);
+        let mut ruless = &mut self.rules;
         for i in 0..(max_rule_id + 1) {
-            rules.push(self.rules[&i].clone());
-        } */
+            rules.push(Rc::new(ruless.remove(&i).unwrap()));
+        }
+
+        Grammar::new(rules, root_id)
     }
 
     fn compile_rule(&mut self, rule: &RawRule, repo: &HashMap<String, RawRule>) -> RuleId {
@@ -99,16 +185,17 @@ impl Compiler {
         let rule_id = self.next_rule();
         rule.id.set(Some(rule_id));
 
-        let compiled_rule = self._create_rule(rule, repo);
+        let compiled_rule = self._create_rule(rule_id, rule, repo);
         self.rules.insert(rule_id, compiled_rule);
         rule_id
     }
 
-    fn _create_rule(&mut self, rule: &RawRule, repo: &HashMap<String, RawRule>) -> Rule {
+    fn _create_rule(&mut self, id: RuleId, rule: &RawRule, repo: &HashMap<String, RawRule>) -> Rule {
         if rule.match_expr.is_some() {
             let match_rule = MatchRule {
+                id,
                 name: rule.name.clone(),
-                match_expr: rule.match_expr.clone().unwrap(),
+                match_src: RegexSet::with_patterns(&[rule.match_expr.as_ref().unwrap()]),
                 captures: self.compile_captures(&rule.captures, repo),
             };
             return Rule::Match(match_rule);
@@ -116,14 +203,16 @@ impl Compiler {
 
         if rule.begin.is_none() {
             let include_rule = IncludeRule {
+                id,
                 patterns: self.compile_patterns(&rule.patterns, repo),
             };
             return Rule::Include(include_rule);
         }
 
         let begin_end_rule = BeginEndRule {
+            id,
             name: rule.name.clone(),
-            begin: rule.begin.clone().unwrap(),
+            begin: RegexSet::with_patterns(&[rule.begin.as_ref().unwrap()]),
             begin_captures: self.compile_captures(&rule.begin_captures, repo),
             end: rule.end.clone().unwrap(),
             end_captures: self.compile_captures(&rule.end_captures, repo),

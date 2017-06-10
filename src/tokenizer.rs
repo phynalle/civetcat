@@ -185,32 +185,6 @@ impl Tokenizer {
         };
 
         let matched = self.match_single_pattern(&*block.borrow(), line);
-        /*
-        let matched = block
-            .borrow()
-            .subscopes
-            .iter()
-            .map(|id| self.grammar.scopes[*id].clone())
-            .filter_map(|scope| {
-                // let scope = scope.upgrade();
-                match scope {
-                    Scope::Match(ref mat) => {
-                        mat.borrow()
-                            .pat
-                            .find(line)
-                            .map(|m| (Matched::Sub(scope.clone()), m))
-                    }
-                    Scope::Block(ref blk) => {
-                        blk.borrow()
-                            .begin
-                            .find(line)
-                            .map(|m| (Matched::Sub(scope.clone()), m))
-                    }
-                    Scope::Patterns(ref ptrns) => None,
-                }
-            })
-            .min_by(|x, y| x.1.start.cmp(&y.1.start));
-        */
         let selected = match (end_matched, matched) {
             (Some(end_matched), Some(matched)) => {
                 if end_matched.start <= matched.1.start {

@@ -7,6 +7,8 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate pcre;
+extern crate onig;
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -40,12 +42,22 @@ struct Parsed {
 }
 
 fn main() {
-    let rule = syntax2::grammar::load_grammars("./syntaxes/go.json");
+    let rule = syntax2::grammar::load_grammars("./syntaxes/rust.json");
     let mut c = syntax2::rule::Compiler::new();
-    c.compile(&mut rule.unwrap());
+    let grammar = c.compile(&mut rule.unwrap());
+
+    let mut text = String::new();
+    match std::io::stdin().read_to_string(&mut text) {
+        Ok(0) => (),
+        Ok(_) => grammar.tokenize_test(&text),
+        Err(_) => (),
+    }
     /*
     let args: Vec<_> = std::env::args().skip(1).collect();
     let result = parse_options(args);
+
+
+
 
     match result {
         Ok(parsed) => run(parsed),
