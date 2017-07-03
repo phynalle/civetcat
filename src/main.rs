@@ -1,5 +1,4 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
-
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
 #[macro_use]
@@ -48,8 +47,8 @@ fn main() {
 
     let mut text = String::new();
     match std::io::stdin().read_to_string(&mut text) {
-        Ok(_) => grammar.tokenize_test(&text),
         Ok(0) | Err(_) => (),
+        Ok(_) => grammar.tokenize_test(&text),
     }
     /*
     let args: Vec<_> = std::env::args().skip(1).collect();

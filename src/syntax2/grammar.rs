@@ -7,7 +7,7 @@ use std::cell::RefCell;
 
 use serde_json;
 
-use syntax2::rule::{FindResult, RawRule, Rule, RuleId, BeginEndRule};
+use syntax2::rule::{FindResult, RawRule, Rule, RuleId, BeginEndRule, CaptureGroup};
 use syntax2::regex_set::{MatchResult, RegexSet};
 
 /* struct Repository {
@@ -55,8 +55,10 @@ impl Grammar {
     }
 
     pub fn tokenize_test(&self, text: &str) {
+            println!("tokenizing li");
         let mut state = State::new(self.root.clone());
         for line in text.lines() {
+            println!("tokenizing line...: {}", line);
             let result = self.tokenize_line(line, state);
             state = result.state;
             for t in &result.tokens {
@@ -73,7 +75,6 @@ impl Grammar {
         let rule: &Rule = state.rule.borrow();
         let matches = rule.find_subpattern(text, &self.rules);
         let matched_rules = matches.into_iter().min_by_key(|m| m.start);
-
         let matched_end = state
             .end_rule
             .borrow()
@@ -87,18 +88,19 @@ impl Grammar {
                           }
                       });
 
-        let process_rules =
+        let _tokenize_rule =
             move |tokens: &mut Vec<Token>, fr: FindResult, prev_state: StateCell| {
-                let rule = self.rules[fr.id].clone();
+                let rule = self.rule(fr.id);
 
                 // capturing
+                let matched_text = &text[fr.start..fr.end];
+                let mut state = self.tokenize_capture(matched_text, &fr, rule.capture_group(), prev_state, tokens);
 
-                let mut state = State::push(prev_state, rule.clone());
-
+                state = State::push(state, rule.clone());
                 tokens.push(Token {
                                 start: fr.start,
                                 end: fr.end,
-                                s: (&text[fr.start..fr.end]).to_owned(),
+                                s: matched_text.to_owned(),
                             });
 
                 match *rule {
@@ -106,7 +108,7 @@ impl Grammar {
                         state = State::pop(state.clone());
                     }
                     Rule::BeginEnd(ref r) => {
-                        println!("it's start: {}", (&text[fr.start..fr.end]));
+                        println!("it's start: {}", matched_text);
                         state.set_end_rule(r);
                     }
                     _ => (),
@@ -114,17 +116,28 @@ impl Grammar {
                 state
             };
 
-        fn process_end(tokens: &mut Vec<Token>,
+        let _tokenize_end_rule = |tokens: &mut Vec<Token>,
+                       rule: &Rule,
                        m: MatchResult,
                        state: StateCell,
-                       text: &str)
-                       -> StateCell {
+                       text: &str| {
             // capturing
-            println!("it's end: {} at {}", (&text[m.start..m.end]), state.depth);
+            let temp_state = state.clone();
+            let capture_group = temp_state.captures.borrow(); // rule.capture_group();
+            let matched_text = &text[m.start..m.end];
+            let fr = FindResult {
+                id: rule.id(),
+                start: m.start,
+                end: m.end,
+                groups: m.groups,
+            };
+            let state = self.tokenize_capture(matched_text, &fr, capture_group.as_ref(), state, tokens);
+
+            println!("it's end: {} at {}", matched_text, state.depth);
             tokens.push(Token {
                             start: m.start,
                             end: m.end,
-                            s: (&text[m.start..m.end]).to_owned(),
+                            s: matched_text.to_owned(),
                         });
 
             State::pop(state)
@@ -134,22 +147,49 @@ impl Grammar {
             (Some(m1), Some(m2)) => {
                 if m1.start < m2.start {
                     let last = m1.end;
-                    (process_rules(tokens, m1, state.clone()), Some(last))
+                    (_tokenize_rule(tokens, m1, state.clone()), Some(last))
                 } else {
                     let last = m2.end;
-                    (process_end(tokens, m2, state.clone(), text), Some(last))
+                    (_tokenize_end_rule(tokens, &rule, m2, state.clone(), text), Some(last))
                 }
             }
             (Some(m), _) => {
                 let last = m.end;
-                (process_rules(tokens, m, state.clone()), Some(last))
+                (_tokenize_rule(tokens, m, state.clone()), Some(last))
             }
             (_, Some(m)) => {
                 let last = m.end;
-                (process_end(tokens, m, state.clone(), text), Some(last))
+                (_tokenize_end_rule(tokens, &rule, m, state.clone(), text), Some(last))
             }
             _ => (state.clone(), None),
         }
+    }
+
+    fn tokenize_capture(&self, text: &str, fr: &FindResult, cg: Option<&CaptureGroup>, mut state: StateCell, tokens: &mut Vec<Token>) -> StateCell {
+        let rule = self.rule(fr.id);
+        if let Some(capture_group) = cg {
+            for (group_number, capture) in &capture_group.0 {
+                if let Some(rule_id) = capture.rule_id {
+                    let grouped_text = match group_number.clone() {
+                        0 => text,
+                        n => {
+                            let view = fr.groups[n - 1];
+                            &text[view.0..view.1]
+                        }
+                    };
+                    println!("Parsed Capture... [{}] {}", rule_id, grouped_text);
+
+                    state = State::push(state, self.rules[rule_id].clone());
+                    self.tokenize_string(grouped_text, state.clone(), tokens);
+                    state = State::pop(state);
+                }
+            }
+        }
+        state
+    }
+
+    fn rule(&self, id: RuleId) -> Rc<Rule> {
+        self.rules[id].clone()
     }
 }
 
@@ -169,6 +209,7 @@ type StateCell = Rc<State>;
 pub struct State {
     rule: Rc<Rule>,
     end_rule: RefCell<Option<RegexSet>>,
+    captures: RefCell<Option<CaptureGroup>>, 
     parent: Option<StateCell>,
     depth: usize,
 }
@@ -178,6 +219,7 @@ impl State {
         let state = State {
             rule,
             end_rule: RefCell::new(None),
+            captures: RefCell::new(None),
             parent: None,
             depth: 0,
         };
@@ -188,6 +230,7 @@ impl State {
         let state = State {
             rule,
             end_rule: RefCell::new(None),
+            captures: RefCell::new(None),
             parent: Some(st.clone()),
             depth: st.depth + 1,
         };
@@ -201,6 +244,7 @@ impl State {
 
     fn set_end_rule(&self, rule: &BeginEndRule) {
         *self.end_rule.borrow_mut() = Some(RegexSet::with_patterns(&[&rule.end]));
+        *self.captures.borrow_mut() = Some(CaptureGroup(rule.end_captures.0.clone()));
     }
 }
 

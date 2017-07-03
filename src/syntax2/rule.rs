@@ -83,6 +83,14 @@ impl Rule {
         }
         res
     }
+
+    pub fn capture_group(&self) -> Option<&CaptureGroup> {
+        match *self {
+            Rule::Include(_) => None,
+            Rule::Match(ref rule) => Some(&rule.captures),
+            Rule::BeginEnd(ref rule) => Some(&rule.begin_captures),
+        }
+    }
 }
 
 pub struct FindResult {
@@ -117,14 +125,14 @@ pub struct BeginEndRule {
     patterns: Vec<RuleId>,
 }
 
-#[derive(Debug)]
-struct CaptureRule {
-    name: Option<String>,
-    rule_id: Option<RuleId>,
+#[derive(Debug, Clone)]
+pub struct CaptureRule {
+    pub name: Option<String>,
+    pub rule_id: Option<RuleId>,
 }
 
 #[derive(Debug)]
-pub struct CaptureGroup(HashMap<usize, CaptureRule>);
+pub struct CaptureGroup(pub HashMap<usize, CaptureRule>);
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -229,7 +237,8 @@ impl Compiler {
         if let Some(ref patterns) = *patterns {
             for pattern in patterns {
                 let rule_id = match pattern.include {
-                    Some(ref inc) => {
+                    None => self.compile_rule(pattern, repo),
+                    Some(ref inc) =>
                         if inc.starts_with('#') {
                             match repo.get(&inc[1..]) {
                                 Some(rule) => self.compile_rule(rule, repo),
@@ -240,8 +249,6 @@ impl Compiler {
                         } else {
                             panic!("unimplemented yet...");
                         }
-                    }
-                    None => self.compile_rule(pattern, repo),
                 };
                 rules.push(rule_id);
             }
