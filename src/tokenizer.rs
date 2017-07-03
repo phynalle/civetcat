@@ -39,7 +39,7 @@ pub struct Block {
 
 #[derive(Debug, Clone)]
 pub struct Patterns {
-    pub subscopes: Vec<ScopeId>, 
+    pub subscopes: Vec<ScopeId>,
 }
 
 #[derive(Debug, Clone)]
@@ -142,32 +142,32 @@ impl Tokenizer {
         tokens
     }
 
-    fn match_single_pattern(&self, mp: &MultiPattern, text: &str) -> Option<(MatchScope, MatchResult)> {
-        mp
-        .scopes()
-        .into_iter()
-        .map(|id| self.grammar.scopes[*id].clone())
-        .filter_map(|scope| {
-            match scope {
-                Scope::Match(ref mat) => {
-                    mat.borrow()
-                        .pat
-                        .find(text)
-                        .map(|m| (MatchScope::Sub(scope.clone()), m))
-                }
-                Scope::Block(ref blk) => {
-                    blk.borrow()
-                        .begin
-                        .find(text)
-                        .map(|m| (MatchScope::Sub(scope.clone()), m))
-                }
-                Scope::Patterns(ref ptrns) => {
-                    let o = ptrns.borrow();
-                    self.match_single_pattern(&(*o), text)
-                }
-            }
-        })
-        .min_by(|x, y| x.1.start.cmp(&y.1.start))
+    fn match_single_pattern(&self,
+                            mp: &MultiPattern,
+                            text: &str)
+                            -> Option<(MatchScope, MatchResult)> {
+        mp.scopes()
+            .into_iter()
+            .map(|id| self.grammar.scopes[*id].clone())
+            .filter_map(|scope| match scope {
+                            Scope::Match(ref mat) => {
+                                mat.borrow()
+                                    .pat
+                                    .find(text)
+                                    .map(|m| (MatchScope::Sub(scope.clone()), m))
+                            }
+                            Scope::Block(ref blk) => {
+                                blk.borrow()
+                                    .begin
+                                    .find(text)
+                                    .map(|m| (MatchScope::Sub(scope.clone()), m))
+                            }
+                            Scope::Patterns(ref ptrns) => {
+                                let o = ptrns.borrow();
+                                self.match_single_pattern(&(*o), text)
+                            }
+                        })
+            .min_by(|x, y| x.1.start.cmp(&y.1.start))
     }
 
     fn tokenize_line(&mut self, line: &str, offset: usize) -> Option<(usize, Vec<Token>)> {

@@ -55,7 +55,7 @@ impl Grammar {
     }
 
     pub fn tokenize_test(&self, text: &str) {
-            println!("tokenizing li");
+        println!("tokenizing li");
         let mut state = State::new(self.root.clone());
         for line in text.lines() {
             println!("tokenizing line...: {}", line);
@@ -88,60 +88,60 @@ impl Grammar {
                           }
                       });
 
-        let _tokenize_rule =
-            move |tokens: &mut Vec<Token>, fr: FindResult, prev_state: StateCell| {
-                let rule = self.rule(fr.id);
+        let _tokenize_rule = move |tokens: &mut Vec<Token>,
+                                   fr: FindResult,
+                                   prev_state: StateCell| {
+            let rule = self.rule(fr.id);
 
-                // capturing
-                let matched_text = &text[fr.start..fr.end];
-                let mut state = self.tokenize_capture(matched_text, &fr, rule.capture_group(), prev_state, tokens);
-
-                state = State::push(state, rule.clone());
-                tokens.push(Token {
-                                start: fr.start,
-                                end: fr.end,
-                                s: matched_text.to_owned(),
-                            });
-
-                match *rule {
-                    Rule::Match(_) => {
-                        state = State::pop(state.clone());
-                    }
-                    Rule::BeginEnd(ref r) => {
-                        println!("it's start: {}", matched_text);
-                        state.set_end_rule(r);
-                    }
-                    _ => (),
-                }
-                state
-            };
-
-        let _tokenize_end_rule = |tokens: &mut Vec<Token>,
-                       rule: &Rule,
-                       m: MatchResult,
-                       state: StateCell,
-                       text: &str| {
             // capturing
-            let temp_state = state.clone();
-            let capture_group = temp_state.captures.borrow(); // rule.capture_group();
-            let matched_text = &text[m.start..m.end];
-            let fr = FindResult {
-                id: rule.id(),
-                start: m.start,
-                end: m.end,
-                groups: m.groups,
-            };
-            let state = self.tokenize_capture(matched_text, &fr, capture_group.as_ref(), state, tokens);
+            let matched_text = &text[fr.start..fr.end];
+            let mut state =
+                self.tokenize_capture(matched_text, &fr, rule.capture_group(), prev_state, tokens);
 
-            println!("it's end: {} at {}", matched_text, state.depth);
+            state = State::push(state, rule.clone());
             tokens.push(Token {
-                            start: m.start,
-                            end: m.end,
+                            start: fr.start,
+                            end: fr.end,
                             s: matched_text.to_owned(),
                         });
 
-            State::pop(state)
+            match *rule {
+                Rule::Match(_) => {
+                    state = State::pop(state.clone());
+                }
+                Rule::BeginEnd(ref r) => {
+                    println!("it's start: {}", matched_text);
+                    state.set_end_rule(r);
+                }
+                _ => (),
+            }
+            state
         };
+
+        let _tokenize_end_rule =
+            |tokens: &mut Vec<Token>, rule: &Rule, m: MatchResult, state: StateCell, text: &str| {
+                // capturing
+                let temp_state = state.clone();
+                let capture_group = temp_state.captures.borrow(); // rule.capture_group();
+                let matched_text = &text[m.start..m.end];
+                let fr = FindResult {
+                    id: rule.id(),
+                    start: m.start,
+                    end: m.end,
+                    groups: m.groups,
+                };
+                let state =
+                    self.tokenize_capture(matched_text, &fr, capture_group.as_ref(), state, tokens);
+
+                println!("it's end: {} at {}", matched_text, state.depth);
+                tokens.push(Token {
+                                start: m.start,
+                                end: m.end,
+                                s: matched_text.to_owned(),
+                            });
+
+                State::pop(state)
+            };
 
         match (matched_rules, matched_end) {
             (Some(m1), Some(m2)) => {
@@ -165,7 +165,13 @@ impl Grammar {
         }
     }
 
-    fn tokenize_capture(&self, text: &str, fr: &FindResult, cg: Option<&CaptureGroup>, mut state: StateCell, tokens: &mut Vec<Token>) -> StateCell {
+    fn tokenize_capture(&self,
+                        text: &str,
+                        fr: &FindResult,
+                        cg: Option<&CaptureGroup>,
+                        mut state: StateCell,
+                        tokens: &mut Vec<Token>)
+                        -> StateCell {
         let rule = self.rule(fr.id);
         if let Some(capture_group) = cg {
             for (group_number, capture) in &capture_group.0 {
@@ -209,7 +215,7 @@ type StateCell = Rc<State>;
 pub struct State {
     rule: Rc<Rule>,
     end_rule: RefCell<Option<RegexSet>>,
-    captures: RefCell<Option<CaptureGroup>>, 
+    captures: RefCell<Option<CaptureGroup>>,
     parent: Option<StateCell>,
     depth: usize,
 }

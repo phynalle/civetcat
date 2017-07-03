@@ -238,7 +238,7 @@ impl Compiler {
             for pattern in patterns {
                 let rule_id = match pattern.include {
                     None => self.compile_rule(pattern, repo),
-                    Some(ref inc) =>
+                    Some(ref inc) => {
                         if inc.starts_with('#') {
                             match repo.get(&inc[1..]) {
                                 Some(rule) => self.compile_rule(rule, repo),
@@ -249,6 +249,7 @@ impl Compiler {
                         } else {
                             panic!("unimplemented yet...");
                         }
+                    }
                 };
                 rules.push(rule_id);
             }
