@@ -41,7 +41,7 @@ struct Parsed {
 }
 
 fn main() {
-    let rule = syntax2::grammar::load_grammars("./syntaxes/rust.json");
+    let rule = syntax2::grammar::load_grammars("./syntaxes/go.json");
     let c = syntax2::rule::Compiler::new();
     let grammar = c.compile(&mut rule.unwrap());
 

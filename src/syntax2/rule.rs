@@ -25,6 +25,14 @@ impl Rule {
         }
     }
 
+    pub fn name(&self) -> Option<&String> {
+        match *self {
+            Rule::Include(ref r) => panic!("Not provided"),
+            Rule::Match(ref r) => r.name.as_ref(),
+            Rule::BeginEnd(ref r) => r.name.as_ref(),
+        }
+    }
+
     pub fn find(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult> {
         let mut res = Vec::new();
         match *self {
@@ -97,7 +105,7 @@ pub struct FindResult {
     pub id: RuleId,
     pub start: usize,
     pub end: usize,
-    pub groups: Vec<(usize, usize)>,
+    pub groups: Vec<Option<(usize, usize)>>,
 }
 
 #[derive(Debug)]
@@ -133,6 +141,12 @@ pub struct CaptureRule {
 
 #[derive(Debug)]
 pub struct CaptureGroup(pub HashMap<usize, CaptureRule>);
+
+impl CaptureGroup {
+    fn get(&self, n: usize) -> Option<&CaptureRule> {
+        self.0.get(&n)
+    }
+}
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -254,7 +268,6 @@ impl Compiler {
                 rules.push(rule_id);
             }
         }
-        rules
     }
 
     fn compile_captures(&mut self,

@@ -45,7 +45,7 @@ impl RegexSet {
             .enumerate()
             .filter_map(|(i, src)| src.captures(text).map(|m| (i, m)))
             .map(|(i, m)| {
-                let groups = (1..m.len()).filter_map(|i| m.pos(i)).collect();
+                let groups = (1..m.len()).map(|i| m.pos(i)).collect();
                 let (start, end) = m.pos(0).unwrap();
                 MatchResult {
                     index: i,
@@ -62,5 +62,5 @@ pub struct MatchResult {
     pub index: usize,
     pub start: usize,
     pub end: usize,
-    pub groups: Vec<(usize, usize)>,
+    pub groups: Vec<Option<(usize, usize)>>,
 }

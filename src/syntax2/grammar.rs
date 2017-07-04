@@ -55,14 +55,13 @@ impl Grammar {
     }
 
     pub fn tokenize_test(&self, text: &str) {
-        println!("tokenizing li");
         let mut state = State::new(self.root.clone());
-        for line in text.lines() {
-            println!("tokenizing line...: {}", line);
+        for (num, line) in text.lines().enumerate() {
+            println!(" * Line[{}]: {}", num, line);
             let result = self.tokenize_line(line, state);
             state = result.state;
             for t in &result.tokens {
-                println!("[{}:{}] {} at depth {}", t.start, t.end, t.s, state.depth);
+                println!("[TOKEN] ({}) [{}:{}] {} at depth {}", t.scope, t.start, t.end, t.s, state.depth);
             }
         }
     }
@@ -94,26 +93,32 @@ impl Grammar {
             let rule = self.rule(fr.id);
 
             // capturing
-            let matched_text = &text[fr.start..fr.end];
             let mut state =
-                self.tokenize_capture(matched_text, &fr, rule.capture_group(), prev_state, tokens);
+                self.tokenize_captures(text, &fr, rule.capture_group(), prev_state, tokens);
 
+            let matched_text = &text[fr.start..fr.end];
             state = State::push(state, rule.clone());
-            tokens.push(Token {
-                            start: fr.start,
-                            end: fr.end,
-                            s: matched_text.to_owned(),
-                        });
 
-            match *rule {
-                Rule::Match(_) => {
+            let scope_name = match *rule {
+                Rule::Match(ref r) => {
+                    println!("[Match] {}", matched_text);
                     state = State::pop(state.clone());
+                    r.name.clone()
                 }
                 Rule::BeginEnd(ref r) => {
-                    println!("it's start: {}", matched_text);
+                    println!("[BeginEnd] BEGIN: {} {}..{}", matched_text, fr.start, fr.end);
                     state.set_end_rule(r);
+                    r.name.clone()
                 }
-                _ => (),
+                _ => None,
+            };
+            if let Some(scope) = scope_name {
+                tokens.push(Token {
+                                start: fr.start,
+                                end: fr.end,
+                                s: matched_text.to_owned(),
+                                scope: scope,
+                            });
             }
             state
         };
@@ -121,9 +126,12 @@ impl Grammar {
         let _tokenize_end_rule =
             |tokens: &mut Vec<Token>, rule: &Rule, m: MatchResult, state: StateCell, text: &str| {
                 // capturing
-                let temp_state = state.clone();
-                let capture_group = temp_state.captures.borrow(); // rule.capture_group();
-                let matched_text = &text[m.start..m.end];
+                let beginend = match *rule {
+                    Rule::BeginEnd(ref r) => r,
+                    _ => panic!("Unreachable"),
+                };
+
+                let capture_group = &beginend.end_captures; 
                 let fr = FindResult {
                     id: rule.id(),
                     start: m.start,
@@ -131,15 +139,20 @@ impl Grammar {
                     groups: m.groups,
                 };
                 let state =
-                    self.tokenize_capture(matched_text, &fr, capture_group.as_ref(), state, tokens);
+                    self.tokenize_captures(text, &fr, Some(capture_group), state, tokens);
 
-                println!("it's end: {} at {}", matched_text, state.depth);
-                tokens.push(Token {
-                                start: m.start,
-                                end: m.end,
-                                s: matched_text.to_owned(),
-                            });
+                let matched_text = &text[m.start..m.end];
+                println!("[BeginEnd] END: {} at {}", matched_text, state.depth);
 
+
+                if let Some(ref scope) = beginend.name {
+                    tokens.push(Token {
+                                    start: m.start,
+                                    end: m.end,
+                                    s: (&text[0..m.end]).to_owned(),
+                                    scope: scope.clone(),
+                                });
+                }
                 State::pop(state)
             };
 
@@ -161,11 +174,23 @@ impl Grammar {
                 let last = m.end;
                 (_tokenize_end_rule(tokens, &rule, m, state.clone(), text), Some(last))
             }
-            _ => (state.clone(), None),
+            _ => {
+                if let Rule::BeginEnd(ref r) = *rule {
+                    if let Some(ref scope) = r.name {
+                         tokens.push(Token {
+                                    start: 0,
+                                    end: text.len(),
+                                    s: text.to_owned(),
+                                    scope: scope.clone(),
+                                });
+                    }
+                }
+                (state.clone(), None)
+            }
         }
     }
 
-    fn tokenize_capture(&self,
+    fn tokenize_captures(&self,
                         text: &str,
                         fr: &FindResult,
                         cg: Option<&CaptureGroup>,
@@ -175,16 +200,30 @@ impl Grammar {
         let rule = self.rule(fr.id);
         if let Some(capture_group) = cg {
             for (group_number, capture) in &capture_group.0 {
-                if let Some(rule_id) = capture.rule_id {
-                    let grouped_text = match group_number.clone() {
-                        0 => text,
-                        n => {
-                            let view = fr.groups[n - 1];
-                            &text[view.0..view.1]
+                let (start, end, grouped_text) = match group_number.clone() {
+                    0 => (fr.start, fr.end, &text[fr.start..fr.end]),
+                    n => {
+                        // println!("[debug] len:{} n:{}", fr.groups.len(), n);
+                        match fr.groups[n-1] {
+                            Some(view) => (view.0, view.1, &text[view.0..view.1]),
+                            None => continue,
                         }
-                    };
-                    println!("Parsed Capture... [{}] {}", rule_id, grouped_text);
+                    }
+                };
+                let name = match capture.name {
+                    Some(ref s) => s.as_str(),
+                    None => "",
+                };
+                println!("[Capture] {} [{}] {}", name, group_number, grouped_text);
 
+                tokens.push(Token {
+                    start,
+                    end,
+                    s: grouped_text.to_owned(),
+                    scope: name.to_owned(),
+                });
+
+                if let Some(rule_id) = capture.rule_id {
                     state = State::push(state, self.rules[rule_id].clone());
                     self.tokenize_string(grouped_text, state.clone(), tokens);
                     state = State::pop(state);
@@ -208,6 +247,7 @@ struct Token {
     start: usize,
     end: usize,
     s: String,
+    scope: String,
 }
 
 type StateCell = Rc<State>;
@@ -215,7 +255,6 @@ type StateCell = Rc<State>;
 pub struct State {
     rule: Rc<Rule>,
     end_rule: RefCell<Option<RegexSet>>,
-    captures: RefCell<Option<CaptureGroup>>,
     parent: Option<StateCell>,
     depth: usize,
 }
@@ -225,7 +264,6 @@ impl State {
         let state = State {
             rule,
             end_rule: RefCell::new(None),
-            captures: RefCell::new(None),
             parent: None,
             depth: 0,
         };
@@ -236,7 +274,6 @@ impl State {
         let state = State {
             rule,
             end_rule: RefCell::new(None),
-            captures: RefCell::new(None),
             parent: Some(st.clone()),
             depth: st.depth + 1,
         };
@@ -250,7 +287,6 @@ impl State {
 
     fn set_end_rule(&self, rule: &BeginEndRule) {
         *self.end_rule.borrow_mut() = Some(RegexSet::with_patterns(&[&rule.end]));
-        *self.captures.borrow_mut() = Some(CaptureGroup(rule.end_captures.0.clone()));
     }
 }
 
@@ -259,3 +295,4 @@ pub fn load_grammars(path: &str) -> Result<RawRule> {
     let r: RawRule = serde_json::from_reader(f)?;
     Ok(r)
 }
+
