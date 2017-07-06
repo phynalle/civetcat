@@ -268,6 +268,7 @@ impl Compiler {
                 rules.push(rule_id);
             }
         }
+        rules
     }
 
     fn compile_captures(&mut self,

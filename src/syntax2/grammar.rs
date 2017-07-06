@@ -34,20 +34,14 @@ impl Grammar {
         Grammar { rules, root }
     }
 
-    pub fn tokenize_line(&self, mut line: &str, mut prev_state: StateCell) -> TokenResult {
+    pub fn tokenize_line(&self, line: &str, mut prev_state: StateCell) -> TokenResult {
         // Match Priority: end > subpatterns
-        let mut tokens = Vec::new();
-        loop {
-            let (new_state, last) = self.tokenize_string(line, prev_state, &mut tokens);
-            prev_state = new_state;
-            match last {
-                Some(e) => {
-                    line = &line[e..];
-                }
-                None => break,
-            }
-        }
+        let mut line_tokens = LineTokens::new(line);
+        let (new_state, last) = self.tokenize_string(line, &mut line_tokens, prev_state);
 
+        prev_state = new_state;
+
+        let tokens = line_tokens.get_result();
         TokenResult {
             state: prev_state,
             tokens,
@@ -61,15 +55,15 @@ impl Grammar {
             let result = self.tokenize_line(line, state);
             state = result.state;
             for t in &result.tokens {
-                println!("[TOKEN] ({}) [{}:{}] {} at depth {}", t.scope, t.start, t.end, t.s, state.depth);
+                println!("[TOKEN] ({}) [{}:{}] at depth {}", t.scope, t.start, t.end, state.depth);
             }
         }
     }
 
     fn tokenize_string(&self,
                        text: &str,
-                       state: StateCell,
-                       tokens: &mut Vec<Token>)
+                       line_tokens: &mut LineTokens,
+                       state: StateCell)
                        -> (StateCell, Option<usize>) {
         let rule: &Rule = state.rule.borrow();
         let matches = rule.find_subpattern(text, &self.rules);
@@ -87,14 +81,14 @@ impl Grammar {
                           }
                       });
 
-        let _tokenize_rule = move |tokens: &mut Vec<Token>,
+        let _tokenize_rule = move |line_tokens: &mut LineTokens,
                                    fr: FindResult,
                                    prev_state: StateCell| {
             let rule = self.rule(fr.id);
 
             // capturing
             let mut state =
-                self.tokenize_captures(text, &fr, rule.capture_group(), prev_state, tokens);
+                self.tokenize_captures(text, &fr, rule.capture_group(), prev_state, line_tokens);
 
             let matched_text = &text[fr.start..fr.end];
             state = State::push(state, rule.clone());
@@ -113,18 +107,18 @@ impl Grammar {
                 _ => None,
             };
             if let Some(scope) = scope_name {
+                /*
                 tokens.push(Token {
                                 start: fr.start,
                                 end: fr.end,
-                                s: matched_text.to_owned(),
                                 scope: scope,
-                            });
+                            });*/
             }
             state
         };
 
         let _tokenize_end_rule =
-            |tokens: &mut Vec<Token>, rule: &Rule, m: MatchResult, state: StateCell, text: &str| {
+            |line_tokens: &mut LineTokens, rule: &Rule, m: MatchResult, state: StateCell, text: &str| {
                 // capturing
                 let beginend = match *rule {
                     Rule::BeginEnd(ref r) => r,
@@ -139,19 +133,18 @@ impl Grammar {
                     groups: m.groups,
                 };
                 let state =
-                    self.tokenize_captures(text, &fr, Some(capture_group), state, tokens);
+                    self.tokenize_captures(text, &fr, Some(capture_group), state, line_tokens);
 
                 let matched_text = &text[m.start..m.end];
                 println!("[BeginEnd] END: {} at {}", matched_text, state.depth);
 
 
                 if let Some(ref scope) = beginend.name {
-                    tokens.push(Token {
+                    /*tokens.push(Token {
                                     start: m.start,
                                     end: m.end,
-                                    s: (&text[0..m.end]).to_owned(),
                                     scope: scope.clone(),
-                                });
+                                });*/
                 }
                 State::pop(state)
             };
@@ -160,29 +153,29 @@ impl Grammar {
             (Some(m1), Some(m2)) => {
                 if m1.start < m2.start {
                     let last = m1.end;
-                    (_tokenize_rule(tokens, m1, state.clone()), Some(last))
+                    (_tokenize_rule(line_tokens, m1, state.clone()), Some(last))
                 } else {
                     let last = m2.end;
-                    (_tokenize_end_rule(tokens, &rule, m2, state.clone(), text), Some(last))
+                    (_tokenize_end_rule(line_tokens, &rule, m2, state.clone(), text), Some(last))
                 }
             }
             (Some(m), _) => {
                 let last = m.end;
-                (_tokenize_rule(tokens, m, state.clone()), Some(last))
+                (_tokenize_rule(line_tokens, m, state.clone()), Some(last))
             }
             (_, Some(m)) => {
                 let last = m.end;
-                (_tokenize_end_rule(tokens, &rule, m, state.clone(), text), Some(last))
+                (_tokenize_end_rule(line_tokens, &rule, m, state.clone(), text), Some(last))
             }
             _ => {
                 if let Rule::BeginEnd(ref r) = *rule {
                     if let Some(ref scope) = r.name {
-                         tokens.push(Token {
+                         /*tokens.push(Token {
                                     start: 0,
                                     end: text.len(),
-                                    s: text.to_owned(),
                                     scope: scope.clone(),
                                 });
+                                */
                     }
                 }
                 (state.clone(), None)
@@ -195,7 +188,7 @@ impl Grammar {
                         fr: &FindResult,
                         cg: Option<&CaptureGroup>,
                         mut state: StateCell,
-                        tokens: &mut Vec<Token>)
+                        line_tokens: &mut LineTokens)
                         -> StateCell {
         let rule = self.rule(fr.id);
         if let Some(capture_group) = cg {
@@ -216,16 +209,15 @@ impl Grammar {
                 };
                 println!("[Capture] {} [{}] {}", name, group_number, grouped_text);
 
-                tokens.push(Token {
+                /*tokens.push(Token {
                     start,
                     end,
-                    s: grouped_text.to_owned(),
                     scope: name.to_owned(),
-                });
+                });*/
 
                 if let Some(rule_id) = capture.rule_id {
                     state = State::push(state, self.rules[rule_id].clone());
-                    self.tokenize_string(grouped_text, state.clone(), tokens);
+                    self.tokenize_string(grouped_text, line_tokens, state.clone());
                     state = State::pop(state);
                 }
             }
@@ -246,8 +238,56 @@ pub struct TokenResult {
 struct Token {
     start: usize,
     end: usize,
-    s: String,
     scope: String,
+}
+
+struct LineTokens<'a> {
+    line: &'a str,
+    last_index: usize,
+
+    tokens: Vec<Token>,
+}
+
+impl<'a> LineTokens<'a> {
+    fn new(line: &'a str) -> LineTokens {
+        LineTokens {
+            line,
+            last_index: 0,
+            tokens: Vec::new(),
+        } 
+    }
+
+    fn produce(&mut self, scope: String, end_index: usize) {
+        self.produce_token(scope, end_index, false)
+    }
+    
+    fn produce_token(&mut self, scope: String, end: usize, from_first: bool) {
+        let start = if from_first {
+            0
+        } else  {
+            if self.last_index >= end {
+                return; 
+            }
+            self.last_index
+        };
+        self.tokens.push(Token {
+            start, 
+            end,
+            scope: scope,
+        });
+        self.last_index = end;
+    }
+
+    fn get_result(mut self) -> Vec<Token> {
+        let length = self.line.len();
+        if self.tokens.last().is_some() && self.tokens.last().unwrap().start == length -1 { 
+            self.tokens.pop();
+        }
+        if self.tokens.is_empty() {
+            self.produce_token("scope".to_owned(), length, true);
+        }
+        self.tokens
+    }
 }
 
 type StateCell = Rc<State>;
@@ -295,4 +335,5 @@ pub fn load_grammars(path: &str) -> Result<RawRule> {
     let r: RawRule = serde_json::from_reader(f)?;
     Ok(r)
 }
+
 
