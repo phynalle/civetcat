@@ -7,8 +7,13 @@ use syntax2::regex_set::RegexSet;
 
 pub type RuleId = usize;
 
+#[derive(Debug, Clone)]
+pub struct Rule {
+    inner: Rc<Inner>,
+}
+
 #[derive(Debug)]
-pub enum Rule {
+pub enum Inner {
     Include(IncludeRule),
     Match(MatchRule),
     BeginEnd(BeginEndRule),
@@ -16,37 +21,41 @@ pub enum Rule {
 }
 
 impl Rule {
+    pub fn new(inner: Inner) -> Rule {
+        Rule { inner: Rc::new(inner) }
+    }
+
     #[allow(dead_code)]
     pub fn id(&self) -> RuleId {
-        match *self {
-            Rule::Include(ref r) => r.id,
-            Rule::Match(ref r) => r.id,
-            Rule::BeginEnd(ref r) => r.id,
+        match *self.inner {
+            Inner::Include(ref r) => r.id,
+            Inner::Match(ref r) => r.id,
+            Inner::BeginEnd(ref r) => r.id,
         }
     }
 
     pub fn name(&self) -> Option<&String> {
-        match *self {
-            Rule::Include(ref r) => panic!("Not provided"),
-            Rule::Match(ref r) => r.name.as_ref(),
-            Rule::BeginEnd(ref r) => r.name.as_ref(),
+        match *self.inner {
+            Inner::Include(ref r) => None,
+            Inner::Match(ref r) => r.name.as_ref(),
+            Inner::BeginEnd(ref r) => r.name.as_ref(),
         }
     }
 
-    pub fn find(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult> {
+    pub fn find_matches(&self, text: &str, rules: &[Rule]) -> Vec<MatchResult> {
         let mut res = Vec::new();
-        match *self {
-            Rule::Include(ref r) => {
+        match *self.inner {
+            Inner::Include(ref r) => {
                 for id in &r.patterns {
-                    let x = rules[*id].find(text, rules);
+                    let x = rules[*id].search(text, rules);
                     res.extend(x);
                 }
             }
-            Rule::Match(ref r) => {
+            Inner::Match(ref r) => {
                 let mut m = r.match_src.find(text);
                 if !m.is_empty() {
                     let mr = m.remove(0);
-                    let r = FindResult {
+                    let r = MatchResult {
                         id: r.id,
                         start: mr.start,
                         end: mr.end,
@@ -55,11 +64,11 @@ impl Rule {
                     res.push(r);
                 }
             }
-            Rule::BeginEnd(ref r) => {
+            Inner::BeginEnd(ref r) => {
                 let mut m = r.begin.find(text);
                 if !m.is_empty() {
                     let mr = m.remove(0);
-                    let r = FindResult {
+                    let r = MatchResult {
                         id: r.id,
                         start: mr.start,
                         end: mr.end,
@@ -72,36 +81,36 @@ impl Rule {
         res
     }
 
-    pub fn find_subpattern(&self, text: &str, rules: &[Rc<Rule>]) -> Vec<FindResult> {
-        let mut res = Vec::new();
-        match *self {
-            Rule::Include(_) => {
-                let x = self.find(text, rules);
-                res.extend(x);
+    pub fn find_subpattern(&self, text: &str, rules: &[Rule]) -> Vec<MatchResult> {
+        let mut results = Vec::new();
+        match *self.inner {
+            Inner::Include(_) => {
+                let ret = self.find_matches(text, rules);
+                results.extend(ret);
             }
-            Rule::Match(_) => {
-                panic!("Impossible");
+            Inner::Match(_) => {
+                panic!("Not Reachable");
             }
-            Rule::BeginEnd(ref r) => {
+            Inner::BeginEnd(ref r) => {
                 for id in &r.patterns {
-                    let x = rules[*id].find(text, rules);
-                    res.extend(x);
+                    let ret = rules[*id].find_matches(text, rules);
+                    results.extend(ret);
                 }
             }
         }
-        res
+        results
     }
 
     pub fn capture_group(&self) -> Option<&CaptureGroup> {
-        match *self {
-            Rule::Include(_) => None,
-            Rule::Match(ref rule) => Some(&rule.captures),
-            Rule::BeginEnd(ref rule) => Some(&rule.begin_captures),
+        match *self.inner {
+            Inner::Include(_) => None,
+            Inner::Match(ref rule) => Some(&rule.captures),
+            Inner::BeginEnd(ref rule) => Some(&rule.begin_captures),
         }
     }
 }
 
-pub struct FindResult {
+pub struct MatchResult {
     pub id: RuleId,
     pub start: usize,
     pub end: usize,
@@ -187,9 +196,8 @@ impl Compiler {
         assert_eq!(max_rule_id + 1, self.rules.len());
 
         let mut rules = Vec::with_capacity(max_rule_id + 1);
-        let mut ruless = &mut self.rules;
         for i in 0..(max_rule_id + 1) {
-            rules.push(Rc::new(ruless.remove(&i).unwrap()));
+            rules.push(self.rules[&i].clone())
         }
 
         Grammar::new(rules, root_id)
@@ -214,21 +222,21 @@ impl Compiler {
                     repo: &HashMap<String, RawRule>)
                     -> Rule {
         if rule.match_expr.is_some() {
-            let match_rule = MatchRule {
+            let match_rule = Inner::Match(MatchRule {
                 id,
                 name: rule.name.clone(),
                 match_src: RegexSet::with_patterns(&[rule.match_expr.as_ref().unwrap()]),
                 captures: self.compile_captures(&rule.captures, repo),
-            };
-            return Rule::Match(match_rule);
+            });
+            return Rule::new(match_rule);
         }
 
         if rule.begin.is_none() {
-            let include_rule = IncludeRule {
+            let include_rule = Inner::Include(IncludeRule {
                 id,
                 patterns: self.compile_patterns(&rule.patterns, repo),
-            };
-            return Rule::Include(include_rule);
+            });
+            return Rule::new(include_rule);
         }
 
         let begin_end_rule = BeginEndRule {
@@ -240,7 +248,7 @@ impl Compiler {
             end_captures: self.compile_captures(&rule.end_captures, repo),
             patterns: self.compile_patterns(&rule.patterns, repo),
         };
-        Rule::BeginEnd(begin_end_rule)
+        Rule::new(Inner::BeginEnd(begin_end_rule))
     }
 
     fn compile_patterns(&mut self,
