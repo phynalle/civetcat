@@ -17,15 +17,13 @@ use std::io::prelude::*;
 use std::iter::Iterator;
 use std::path::Path;
 
-mod lang;
+// mod lang;
 mod parser;
 mod syntax;
 mod colorizer;
 mod pipeline;
 mod tokenizer;
-mod _generated;
-
-mod syntax2;
+// mod _generated;
 
 use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
@@ -41,14 +39,13 @@ struct Parsed {
 }
 
 fn main() {
-    let rule = syntax2::grammar::load_grammars("./syntaxes/go.json");
-    let c = syntax2::rule::Compiler::new();
-    let grammar = c.compile(&mut rule.unwrap());
+    let mut rule = syntax::grammar::load_grammars("./syntaxes/rust.json").unwrap();
+    let mut c = syntax::rule::Compiler::new();
+    let grammar = c.compile(&mut rule);
 
     let mut text = String::new();
     match std::io::stdin().read_to_string(&mut text) {
-        Ok(0) | Err(_) => (),
-        Ok(_) => grammar.tokenize_test(&text),
+        Ok(0) | Err(_) => (), Ok(_) => grammar.tokenize_test(&text),
     }
     /*
     let args: Vec<_> = std::env::args().skip(1).collect();
@@ -69,7 +66,7 @@ fn main() {
 }
 
 fn run(mut parsed: Parsed) {
-    let ll = lang::LangLoader::new();
+/*    let ll = lang::LangLoader::new();
 
     if parsed.file_names.is_empty() {
         parsed.file_names.push("-".to_owned());
@@ -104,6 +101,7 @@ fn run(mut parsed: Parsed) {
             }
         }
     }
+    */
 }
 
 fn print_error(err: &str) {
