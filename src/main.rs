@@ -45,7 +45,8 @@ fn main() {
 
     let mut text = String::new();
     match std::io::stdin().read_to_string(&mut text) {
-        Ok(0) | Err(_) => (), Ok(_) => grammar.tokenize_test(&text),
+        Ok(0) | Err(_) => (),
+        Ok(_) => grammar.tokenize_test(&text),
     }
     /*
     let args: Vec<_> = std::env::args().skip(1).collect();
@@ -66,7 +67,7 @@ fn main() {
 }
 
 fn run(mut parsed: Parsed) {
-/*    let ll = lang::LangLoader::new();
+    /*    let ll = lang::LangLoader::new();
 
     if parsed.file_names.is_empty() {
         parsed.file_names.push("-".to_owned());
@@ -114,10 +115,10 @@ fn get_exe_name() -> String {
     std::env::current_exe()
         .ok()
         .and_then(|p| {
-                      p.file_name()
-                          .and_then(|s| s.to_str())
-                          .map(|s| s.to_string())
-                  })
+            p.file_name().and_then(|s| s.to_str()).map(
+                |s| s.to_string(),
+            )
+        })
         .unwrap_or_else(|| EXECUTABLE_NAME.to_owned())
 }
 

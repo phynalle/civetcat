@@ -25,9 +25,10 @@ impl LangLoader {
         match _generated::_load_grammar(lang) {
             Ok(g) => {
                 let g = Rc::new(g);
-                self.grammars
-                    .borrow_mut()
-                    .insert(lang.to_owned(), g.clone());
+                self.grammars.borrow_mut().insert(
+                    lang.to_owned(),
+                    g.clone(),
+                );
                 g
             }
             Err(e) => panic!("{}", e),

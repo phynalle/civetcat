@@ -68,10 +68,10 @@ impl Pattern {
                 }
             }
             Some(MatchResult {
-                     start: m.group_start(0),
-                     end: m.group_end(0),
-                     captured: captured,
-                 })
+                start: m.group_start(0),
+                end: m.group_end(0),
+                captured: captured,
+            })
         } else {
             None
         }
@@ -142,31 +142,30 @@ impl Tokenizer {
         tokens
     }
 
-    fn match_single_pattern(&self,
-                            mp: &MultiPattern,
-                            text: &str)
-                            -> Option<(MatchScope, MatchResult)> {
+    fn match_single_pattern(
+        &self,
+        mp: &MultiPattern,
+        text: &str,
+    ) -> Option<(MatchScope, MatchResult)> {
         mp.scopes()
             .into_iter()
             .map(|id| self.grammar.scopes[*id].clone())
             .filter_map(|scope| match scope {
-                            Scope::Match(ref mat) => {
-                                mat.borrow()
-                                    .pat
-                                    .find(text)
-                                    .map(|m| (MatchScope::Sub(scope.clone()), m))
-                            }
-                            Scope::Block(ref blk) => {
-                                blk.borrow()
-                                    .begin
-                                    .find(text)
-                                    .map(|m| (MatchScope::Sub(scope.clone()), m))
-                            }
-                            Scope::Patterns(ref ptrns) => {
-                                let o = ptrns.borrow();
-                                self.match_single_pattern(&(*o), text)
-                            }
-                        })
+                Scope::Match(ref mat) => {
+                    mat.borrow().pat.find(text).map(|m| {
+                        (MatchScope::Sub(scope.clone()), m)
+                    })
+                }
+                Scope::Block(ref blk) => {
+                    blk.borrow().begin.find(text).map(|m| {
+                        (MatchScope::Sub(scope.clone()), m)
+                    })
+                }
+                Scope::Patterns(ref ptrns) => {
+                    let o = ptrns.borrow();
+                    self.match_single_pattern(&(*o), text)
+                }
+            })
             .min_by(|x, y| x.1.start.cmp(&y.1.start))
     }
 
@@ -202,8 +201,8 @@ impl Tokenizer {
                 let mut tokens: Vec<Token> = m.captured
                     .iter()
                     .map(|&(_, start, end, ref name)| {
-                             Token(offset + start, offset + end, name.clone())
-                         })
+                        Token(offset + start, offset + end, name.clone())
+                    })
                     .collect();
                 if let Some(name) = block.borrow().name.as_ref() {
                     tokens.push(Token(self.states.top().pos, offset + m.end, name.clone()));
@@ -215,16 +214,19 @@ impl Tokenizer {
                 let mut tokens: Vec<Token> = m.captured
                     .iter()
                     .map(|&(_, start, end, ref name)| {
-                             Token(offset + start, offset + end, name.clone())
-                         })
+                        Token(offset + start, offset + end, name.clone())
+                    })
                     .collect();
                 if let Scope::Block(ref blk) = *scope {
                     let backref = m.captured
                         .iter()
                         .map(|&(i, begin, end, _)| (i, line[begin..end].to_string()))
                         .collect();
-                    self.states
-                        .push(MatchState::new(blk.clone(), offset + m.start, backref));
+                    self.states.push(MatchState::new(
+                        blk.clone(),
+                        offset + m.start,
+                        backref,
+                    ));
                 } else if let Some(name) = scope.name() {
                     tokens.insert(0, Token(offset + m.start, offset + m.end, name.clone()));
                 }

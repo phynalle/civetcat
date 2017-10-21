@@ -20,7 +20,7 @@ struct Theme {
 struct Scope {
     name: Option<String>,
     scope: Option<String>,
-    #[serde(rename="settings")]
+    #[serde(rename = "settings")]
     style: Style,
 }
 
@@ -163,9 +163,11 @@ impl Node {
             }
             self.children.insert(keys[0].to_string(), Node::new(value));
         } else {
-            let node = self.children
-                .entry(keys[0].to_string())
-                .or_insert_with(|| Node::new(Style::empty()));
+            let node = self.children.entry(keys[0].to_string()).or_insert_with(
+                || {
+                    Node::new(Style::empty())
+                },
+            );
             (*node).insert(&keys[1..], value);
         }
     }
@@ -235,7 +237,8 @@ impl<'a> TextColorizer<'a> {
     }
 
     fn pop_until<F>(&mut self, f: F)
-        where F: Fn(&'a (usize, usize, Style)) -> bool
+    where
+        F: Fn(&'a (usize, usize, Style)) -> bool,
     {
         while !self.is_empty() {
             let top = self.top().unwrap();

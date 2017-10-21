@@ -24,9 +24,6 @@ pub fn simple_match(pattern: &str, text: &str) -> Option<MatchResult> {
         for pos in cap.iter_pos() {
             captures.push(pos);
         }
-        MatchResult {
-            captures,
-        }
+        MatchResult { captures }
     })
 }
-

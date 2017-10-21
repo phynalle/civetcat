@@ -1,5 +1,6 @@
 use std::io::Result;
-use std::fs::File; use std::cell::RefCell;
+use std::fs::File;
+use std::cell::RefCell;
 
 use serde_json;
 
@@ -19,10 +20,7 @@ pub struct Grammar {
 
 impl Grammar {
     pub fn new(rules: Vec<Rule>, root_id: RuleId) -> Grammar {
-        Grammar {
-            root_id,
-            rules,
-        }
+        Grammar { root_id, rules }
     }
 
     pub fn rule(&self, id: RuleId) -> Rule {
@@ -57,20 +55,26 @@ impl<'a> Tokenizer<'a> {
         t.state.push(grammar.rule(0), None);
         t
     }
-    
+
     pub fn tokenize(&mut self, s: &str) {
         for line in s.lines() {
             println!("line: {}", line);
-           self.tokenize_line(line);
+            self.tokenize_line(line);
             for token in &self.tokengen.tokens {
-                println!("({}, {}): {:?}, {}", token.start, token.end, token.scopes, &line[token.start..token.end]); 
+                println!(
+                    "({}, {}): {:?}, {}",
+                    token.start,
+                    token.end,
+                    token.scopes,
+                    &line[token.start..token.end]
+                );
             }
             self.tokengen = TokenGenerator::new();
         }
     }
 
     fn tokenize_line(&mut self, line: &str) {
-        let n  = line.len();
+        let n = line.len();
         let mut offset = 0;
         while offset < n {
             match self.tokenize_next(&line[offset..n], offset) {
@@ -90,18 +94,18 @@ impl<'a> Tokenizer<'a> {
                 if self.tokengen.pos < pos.0 {
                     self.tokengen.generate(pos.0, &self.state);
                 }
-                
+
                 let rule = self.grammar.rule(m.rule);
                 rule.do_match(|r| {
                     self.state.push(rule.clone(), None);
                     self.process_capture(text, offset, &m.caps.captures, &r.captures);
-                    self.tokengen.generate(pos.1, &self.state); 
+                    self.tokengen.generate(pos.1, &self.state);
                     self.state.pop();
                 });
                 rule.do_beginend(|r| {
                     self.state.push(rule.clone(), Some(r.end_expr.clone()));
                     self.process_capture(text, offset, &m.caps.captures, &r.begin_captures);
-                    self.tokengen.generate(pos.1, &self.state); 
+                    self.tokengen.generate(pos.1, &self.state);
                 });
 
                 Some(pos.1)
@@ -131,32 +135,44 @@ impl<'a> Tokenizer<'a> {
 
     fn best_match(&mut self, text: &str) -> BestMatchResult {
         let state = self.state.current();
-        let pattern_match = state.rule.
-            match_subpatterns(text, &self.grammar.rules).into_iter().
-            min_by_key(|x| x.caps.start());
-        let end_match = state.end_expr.as_ref().and_then(|expr| {
-            simple_match(expr, text)
-        });
-        
+        let pattern_match = state
+            .rule
+            .match_subpatterns(text, &self.grammar.rules)
+            .into_iter()
+            .min_by_key(|x| x.caps.start());
+        let end_match = state.end_expr.as_ref().and_then(
+            |expr| simple_match(expr, text),
+        );
+
         match (pattern_match, end_match) {
             (None, None) => BestMatchResult::None,
             (None, Some(e)) => BestMatchResult::End(e),
             (Some(p), None) => BestMatchResult::Pattern(p),
-            (Some(p), Some(e)) => 
+            (Some(p), Some(e)) => {
                 if e.start() < p.caps.start() {
                     BestMatchResult::End(e)
-                }  else {
+                } else {
                     BestMatchResult::Pattern(p)
                 }
+            }
         }
     }
 
-    fn process_capture(&mut self, text: &str, offset: usize, captured: &[Option<(usize, usize)>], capture_group: &CaptureGroup) {
+    fn process_capture(
+        &mut self,
+        text: &str,
+        offset: usize,
+        captured: &[Option<(usize, usize)>],
+        capture_group: &CaptureGroup,
+    ) {
         for (i, cap) in captured.into_iter().enumerate() {
             if let Some(pos) = *cap {
                 if let Some(capture) = capture_group.0.get(&i) {
                     if capture.rule_id.is_some() {
-                        self.state.push(self.grammar.rule(capture.rule_id.unwrap()), None);
+                        self.state.push(
+                            self.grammar.rule(capture.rule_id.unwrap()),
+                            None,
+                        );
                         if self.tokengen.pos < pos.0 {
                             self.tokengen.generate(pos.0, &self.state);
                         }
@@ -165,10 +181,9 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
             }
-        } 
+        }
 
     }
-
 }
 
 struct RuleState {
@@ -210,7 +225,7 @@ impl State {
 }
 
 struct TokenGenerator {
-    pos: usize, 
+    pos: usize,
     tokens: Vec<Token>,
 }
 
@@ -246,4 +261,3 @@ struct Token {
     end: usize,
     scopes: Vec<String>,
 }
-

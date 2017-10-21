@@ -26,25 +26,25 @@ impl Pipeline {
                 let mut v: Vec<_> = tokens
                     .into_iter()
                     .filter_map(|t| {
-                                    let sts = self.scopes.get(&t.2);
-                                    sts.and_then(|sts| if !sts.is_empty() {
-                                                     Some((t.0, t.1, sts))
-                                                 } else {
-                                                     None
-                                                 })
-                                })
+                        let sts = self.scopes.get(&t.2);
+                        sts.and_then(|sts| if !sts.is_empty() {
+                            Some((t.0, t.1, sts))
+                        } else {
+                            None
+                        })
+                    })
                     .collect();
                 v.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
                 (line, v)
             })
             .map(|(line, tokens)| {
-                     let mut s = line.to_owned();
-                     for p in TextColorizer::process(&tokens) {
-                         s.insert_str(p.0, &p.1);
-                     }
-                     s.push('\n');
-                     s
-                 })
+                let mut s = line.to_owned();
+                for p in TextColorizer::process(&tokens) {
+                    s.insert_str(p.0, &p.1);
+                }
+                s.push('\n');
+                s
+            })
             .collect::<String>()
     }
 
@@ -54,13 +54,13 @@ impl Pipeline {
         let mut tokens: Vec<_> = tokens
             .into_iter()
             .filter_map(|t| {
-                            let sts = self.scopes.get(&t.2);
-                            sts.and_then(|sts| if !sts.is_empty() {
-                                             Some((t.0, t.1, sts))
-                                         } else {
-                                             None
-                                         })
-                        })
+                let sts = self.scopes.get(&t.2);
+                sts.and_then(|sts| if !sts.is_empty() {
+                    Some((t.0, t.1, sts))
+                } else {
+                    None
+                })
+            })
             .collect();
         tokens.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
         let mut s = line.to_owned();
