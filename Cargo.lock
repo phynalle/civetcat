@@ -4,7 +4,7 @@ version = "0.1.0"
 dependencies = [
  "clippy 0.0.138 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "onig 1.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "onig 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pcre 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "0.7.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -138,18 +138,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "onig"
-version = "1.2.4"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitflags 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
- "onig_sys 63.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "onig_sys 66.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "onig_sys"
-version = "63.0.1"
+version = "66.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cmake 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -290,7 +290,7 @@ dependencies = [
 ]
 
 [metadata]
-"checksum bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "aad18937a628ec6abcd26d1489012cc0e18c21798210f491af69ded9b881106d"
+"checksum bitflags 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f5cde24d1b2e2216a726368b2363a273739c91f4e3eb4e0dd12d672d396ad989"
 "checksum bzip2 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c3eafc42c44e0d827de6b1c131175098fe7fb53b8ce8a47e65cb3ea94688be24"
 "checksum bzip2-sys 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "98ce3fff84d4e90011f464bbdf48e3428f04270439f703868fd489d2aaedfc30"
 "checksum cargo_metadata 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5d84cb53c78e573aa126a4b9f963fdb2629f8183b26e235da08bb36dc7381162"
@@ -307,8 +307,8 @@ dependencies = [
 "checksum libpcre-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0ff3dd28ba96d6fe6752882f2f1b25ba8e1646448e79042442347cf3a92a6666"
 "checksum matches 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "100aabe6b8ff4e4a7e32c1c13523379802df0772b82466207ac25b013f193376"
 "checksum num-traits 0.1.39 (registry+https://github.com/rust-lang/crates.io-index)" = "1708c0628602a98b52fad936cf3edb9a107af06e52e49fdf0707e884456a6af6"
-"checksum onig 1.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "b91dc0c72022432de4db62276aa6a77da8592721c56e2abe0fc8f0243bbf5110"
-"checksum onig_sys 63.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e9a96451b271df7055e35b5a4a42820e893e8f5ce75591fc02b5dd808ba004fd"
+"checksum onig 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "052d51360dbfca9062928a14f5387cbc4f02a0d588812b700c1d4db3abca7b26"
+"checksum onig_sys 66.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "663851999d9eb82b8857af925611a875b79d1ecdb0ddaee44d1b822a92e40eac"
 "checksum pcre 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "8f2cf69d4d3e55fac13ccbbf142e650bccbcd9cd2e5b5b69033df9e97d190562"
 "checksum pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "3a8b4c6b8165cd1a1cd4b9b120978131389f64bdaf456435caa41e630edba903"
 "checksum quine-mc_cluskey 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "07589615d719a60c8dd8a4622e7946465dfef20d1a428f969e3443e7386d5f45"
