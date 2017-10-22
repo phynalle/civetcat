@@ -1,5 +1,26 @@
-use onig::Regex;
-use std::process::Command;
+use onig;
+
+pub struct Regex {
+    re: onig::Regex,
+}
+
+impl Regex {
+    pub fn new(pattern: &str) -> Regex {
+        Regex {
+            re: onig::Regex::new(pattern).expect(&format!("cannot compile pattern: {}", pattern)),
+        }
+    }
+
+    pub fn find(&self, text: &str) -> Option<MatchResult> {
+        self.re.captures(text).map(|cap| {
+            let mut captures = Vec::new();
+            for pos in cap.iter_pos() {
+                captures.push(pos);
+            }
+            MatchResult { captures }
+        })
+    }
+}
 
 pub struct MatchResult {
     pub captures: Vec<Option<(usize, usize)>>,
@@ -18,12 +39,6 @@ impl MatchResult {
 }
 
 pub fn simple_match(pattern: &str, text: &str) -> Option<MatchResult> {
-    let regex = Regex::new(pattern).unwrap();
-    regex.captures(text).map(|cap| {
-        let mut captures = Vec::new();
-        for pos in cap.iter_pos() {
-            captures.push(pos);
-        }
-        MatchResult { captures }
-    })
+    Regex::new(pattern).find(text)
 }
+

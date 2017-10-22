@@ -1,8 +1,11 @@
 use std::io::Result;
 use std::collections::HashMap;
-use std::fs::File;
 
 use serde_json;
+
+pub fn load_theme(raw_text: &str) -> Result<ScopeTree> {
+    ScopeTree::create(raw_text)
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -48,13 +51,13 @@ impl Style {
     #[allow(dead_code)]
     pub fn from(&self, style: Style) -> Style {
         let mut new = self.clone();
-        if new.foreground.is_none() {
+        if style.foreground.is_some() {
             new.foreground = style.foreground;
         }
-        if new.background.is_none() {
+        if style.background.is_some() {
             new.background = style.background;
         }
-        if new.font_style.is_none() {
+        if style.font_style.is_some() {
             new.font_style = style.font_style;
         }
         new
@@ -101,9 +104,8 @@ impl ScopeTree {
         }
     }
 
-    pub fn create(filename: &str) -> Result<ScopeTree> {
-        let f = File::open(filename)?;
-        let theme: Theme = serde_json::from_reader(f)?;
+    pub fn create(text: &str) -> Result<ScopeTree> {
+        let theme: Theme = serde_json::from_str(text)?;
         let mut tree = ScopeTree::new(theme.settings[0].style.clone());
         for scope in &theme.settings[1..] {
             if scope.scope.is_none() {
@@ -125,6 +127,7 @@ impl ScopeTree {
         Ok(tree)
     }
 
+
     fn insert(&mut self, key: &str, value: Style) {
         let keys: Vec<_> = key.split('.').collect();
         self.root.insert(&keys, value);
@@ -133,6 +136,16 @@ impl ScopeTree {
     pub fn get(&self, key: &str) -> Option<Style> {
         let keys: Vec<_> = key.split('.').collect();
         self.root.get(&keys)
+    }
+
+    pub fn style<T: AsRef<str>>(&self, keys: &[T]) -> Style {
+        let mut style = Style::empty();
+        for key in keys {
+            if let Some(s) = self.get(key.as_ref()) {
+                style = style.from(s);
+            }
+        }
+        style
     }
 
     // fn print_debug(&self) {
@@ -216,6 +229,7 @@ impl<'a> TextColorizer<'a> {
     }
 
     fn top(&self) -> Option<&'a (usize, usize, Style)> {
+        // self.stack.iter().rev().nth(1)
         if self.stack.is_empty() {
             None
         } else {

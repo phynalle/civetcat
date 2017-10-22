@@ -2,7 +2,8 @@ use std::rc::Rc;
 use std::cell::Cell;
 use std::collections::HashMap;
 use syntax::grammar::Grammar;
-use syntax::regex::{self, simple_match};
+use syntax::regex::{self, Regex};
+
 pub type RuleId = usize;
 
 pub struct MatchResult {
@@ -45,7 +46,7 @@ impl Rule {
                 }
             }
             Inner::Match(ref r) => {
-                let m = simple_match(&r.expr, text);
+                let m = r.expr.find(text);
                 if m.is_some() {
                     match_results.push(MatchResult {
                         rule: r.id,
@@ -54,7 +55,7 @@ impl Rule {
                 }
             }
             Inner::BeginEnd(ref r) => {
-                let m = simple_match(&r.begin_expr, text);
+                let m = r.begin_expr.find(text);
                 if m.is_some() {
                     match_results.push(MatchResult {
                         rule: r.id,
@@ -113,7 +114,7 @@ pub struct IncludeRule {
 pub struct MatchRule {
     pub id: RuleId,
     pub name: Option<String>,
-    pub expr: String,
+    pub expr: Regex,
     pub captures: CaptureGroup,
 }
 
@@ -121,17 +122,12 @@ pub struct BeginEndRule {
     pub id: RuleId,
     pub name: Option<String>,
 
-    pub begin_expr: String,
+    pub begin_expr: Regex,
     pub end_expr: String,
     pub begin_captures: CaptureGroup,
     pub end_captures: CaptureGroup,
 
     pub patterns: Vec<RuleId>,
-}
-
-pub struct Capture {
-    pub name: Option<String>,
-    pub rule_id: Option<RuleId>,
 }
 
 pub struct CaptureGroup(pub HashMap<usize, usize>);
@@ -150,11 +146,11 @@ impl Compiler {
     }
 
     pub fn compile(&mut self, raw: &mut RawRule) -> Grammar {
-        let mut repo = HashMap::new();
+        let repo = HashMap::new();
         let root_id = self.compile_rule(raw, raw.repository.as_ref().unwrap_or(&repo));
 
         let mut rules = Vec::new();
-        for i in (0..self.next_id) {
+        for i in 0..self.next_id {
             rules.push(self.rules[&i].clone());
         }
 
@@ -171,7 +167,7 @@ impl Compiler {
             Inner::Match(MatchRule {
                 id: rule_id,
                 name: rule.name.clone(),
-                expr: rule.match_expr.clone().unwrap(),
+                expr: Regex::new(&rule.match_expr.as_ref().unwrap()),
                 captures: self.compile_captures(&rule.captures, repo),
             })
         } else if rule.begin.is_none() {
@@ -190,7 +186,7 @@ impl Compiler {
             Inner::BeginEnd(BeginEndRule {
                 id: rule_id,
                 name: rule.name.clone(),
-                begin_expr: rule.begin.clone().unwrap(),
+                begin_expr: Regex::new(rule.begin.as_ref().unwrap()),
                 end_expr: rule.end.clone().unwrap(),
                 begin_captures: self.compile_captures(&rule.begin_captures, repo),
                 end_captures: self.compile_captures(&rule.end_captures, repo),
@@ -278,3 +274,4 @@ pub struct RawRule {
     pub patterns: Option<Vec<RawRule>>,
     pub repository: Option<HashMap<String, RawRule>>,
 }
+

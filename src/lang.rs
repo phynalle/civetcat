@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use tokenizer::Grammar;
+use syntax::grammar::Grammar;
 use _generated;
 
 pub fn identify(ext: &str) -> Option<&str> {

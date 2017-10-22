@@ -17,13 +17,13 @@ use std::io::prelude::*;
 use std::iter::Iterator;
 use std::path::Path;
 
-// mod lang;
+mod lang;
+mod theme;
 mod parser;
 mod syntax;
 mod colorizer;
 mod pipeline;
-mod tokenizer;
-// mod _generated;
+mod _generated;
 
 use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
@@ -39,21 +39,8 @@ struct Parsed {
 }
 
 fn main() {
-    let mut rule = syntax::grammar::load_grammars("./syntaxes/rust.json").unwrap();
-    let mut c = syntax::rule::Compiler::new();
-    let grammar = c.compile(&mut rule);
-
-    let mut text = String::new();
-    match std::io::stdin().read_to_string(&mut text) {
-        Ok(0) | Err(_) => (),
-        Ok(_) => grammar.tokenize_test(&text),
-    }
-    /*
     let args: Vec<_> = std::env::args().skip(1).collect();
     let result = parse_options(args);
-
-
-
 
     match result {
         Ok(parsed) => run(parsed),
@@ -63,11 +50,11 @@ fn main() {
                              "usage: {} [-n] [file ...]",
                              get_exe_name());
         }
-    }*/
+    }
 }
 
 fn run(mut parsed: Parsed) {
-    /*    let ll = lang::LangLoader::new();
+    let ll = lang::LangLoader::new();
 
     if parsed.file_names.is_empty() {
         parsed.file_names.push("-".to_owned());
@@ -79,8 +66,7 @@ fn run(mut parsed: Parsed) {
             printer.print(std::io::stdin(), |s| s.to_owned());
         } else {
             match File::open(file_name.clone()) {
-                Ok(file) => {
-                    let path = Path::new(file_name);
+                Ok(file) => { let path = Path::new(file_name);
                     let grammar = path.extension()
                         .and_then(|ext| ext.to_str())
                         .and_then(|ext| lang::identify(ext))
@@ -89,11 +75,13 @@ fn run(mut parsed: Parsed) {
                     match grammar {
                         Some(g) => {
                             printer.print(file, |s| {
-                                let mut pl = Pipeline::new(g.clone());
+                                let mut pl = Pipeline::new(theme::load(), g.clone());
                                 pl.process_line(s)
-                            })
+                            });
                         }
-                        None => printer.print(file, |s| s.to_owned()),
+                        None => {
+                            printer.print(file, |s| s.to_owned());
+                        }
                     }
                 }
                 Err(e) => {
@@ -102,7 +90,6 @@ fn run(mut parsed: Parsed) {
             }
         }
     }
-    */
 }
 
 fn print_error(err: &str) {

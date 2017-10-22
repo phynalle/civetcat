@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use colorizer::ScopeTree;
 use colorizer::TextColorizer;
-use tokenizer::{Tokenizer, Grammar};
+use syntax::grammar::{Tokenizer, Grammar};
 
 pub struct Pipeline {
     scopes: ScopeTree,
@@ -10,31 +10,27 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    pub fn new(grammar: Rc<Grammar>) -> Pipeline {
+    pub fn new(scopes: ScopeTree, grammar: Rc<Grammar>) -> Pipeline {
         Pipeline {
-            scopes: ScopeTree::create("themes/Kimbie_dark.json").unwrap(),
+            scopes,
             grammar,
         }
     }
 
     #[allow(dead_code)]
     pub fn process(&mut self, text: &str) -> String {
-        let mut tok = Tokenizer::new(self.grammar.clone());
+        let mut tok = Tokenizer::new(&(*self.grammar));
         text.lines()
-            .map(|line| (line, tok.tokenize(line)))
+            .map(|line| (line, tok.tokenize_line(line)))
             .map(|(line, tokens)| {
-                let mut v: Vec<_> = tokens
+                let v: Vec<_> = tokens
                     .into_iter()
-                    .filter_map(|t| {
-                        let sts = self.scopes.get(&t.2);
-                        sts.and_then(|sts| if !sts.is_empty() {
-                            Some((t.0, t.1, sts))
-                        } else {
-                            None
-                        })
+                    .map(|t| {
+                        let style = self.scopes.style(&t.scopes);
+                        (t.start, t.end, style)
                     })
                     .collect();
-                v.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
+                // v.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
                 (line, v)
             })
             .map(|(line, tokens)| {
@@ -49,20 +45,14 @@ impl Pipeline {
     }
 
     pub fn process_line(&mut self, line: &str) -> String {
-        let mut tok = Tokenizer::new(self.grammar.clone());
-        let tokens = tok.tokenize(line);
-        let mut tokens: Vec<_> = tokens
+        let mut tok = Tokenizer::new(&*self.grammar);
+        let tokens = tok.tokenize_line(line);
+        let tokens: Vec<_> = tokens
             .into_iter()
-            .filter_map(|t| {
-                let sts = self.scopes.get(&t.2);
-                sts.and_then(|sts| if !sts.is_empty() {
-                    Some((t.0, t.1, sts))
-                } else {
-                    None
-                })
+            .map(|t| { let style = self.scopes.style(&t.scopes);
+                (t.start, t.end, style)
             })
             .collect();
-        tokens.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
         let mut s = line.to_owned();
         for p in TextColorizer::process(&tokens) {
             s.insert_str(p.0, &p.1);

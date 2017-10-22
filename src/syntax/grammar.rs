@@ -1,23 +1,18 @@
 use std::io::Result;
-use std::fs::File;
-use std::cell::RefCell;
-
 use serde_json;
+use syntax::rule::{self, Compiler, Rule, RuleId, RawRule, CaptureGroup};
+use syntax::regex::{self, Regex};
 
-use syntax::rule::{self, Rule, RuleId, RawRule, Capture, CaptureGroup};
-use syntax::regex::{self, simple_match};
-
-pub fn load_grammars(path: &str) -> Result<RawRule> {
-    let f = File::open(path)?;
-    let r: RawRule = serde_json::from_reader(f)?;
-    Ok(r)
+pub fn load_grammar(raw_text: &str) -> Result<Grammar> {
+    let mut rule: RawRule = serde_json::from_str(raw_text)?;
+    let mut c = Compiler::new();
+    Ok(c.compile(&mut rule))
 }
 
 pub struct Grammar {
     root_id: RuleId,
     rules: Vec<Rule>,
 }
-
 impl Grammar {
     pub fn new(rules: Vec<Rule>, root_id: RuleId) -> Grammar {
         Grammar { root_id, rules }
@@ -25,11 +20,6 @@ impl Grammar {
 
     pub fn rule(&self, id: RuleId) -> Rule {
         self.rules[id].clone()
-    }
-
-    pub fn tokenize_test(&self, s: &str) {
-        let mut tokenizer = Tokenizer::new(&self);
-        tokenizer.tokenize(s);
     }
 }
 
@@ -39,57 +29,54 @@ enum BestMatchResult {
     None,
 }
 
-struct Tokenizer<'a> {
+pub struct Tokenizer<'a> {
     state: State,
     grammar: &'a Grammar,
     tokengen: TokenGenerator,
 }
 
 impl<'a> Tokenizer<'a> {
-    fn new(grammar: &'a Grammar) -> Tokenizer {
-        let mut t = Tokenizer {
+    pub fn new(grammar: &'a Grammar) -> Tokenizer {
+        let mut tokenizer = Tokenizer {
             state: State::new(),
             grammar,
             tokengen: TokenGenerator::new(),
         };
-        t.state.push(grammar.rule(0), None);
-        t
+        tokenizer.state.push(grammar.rule(grammar.root_id), None);
+        tokenizer
     }
 
-    pub fn tokenize(&mut self, s: &str) {
+    pub fn tokenize(&mut self, s: &str) -> Vec<Vec<Token>> {
+        let mut line_tokens = Vec::new();
         for line in s.lines() {
-            self.tokenize_line(line);
-            for token in &self.tokengen.tokens {
-                println!(
-                    "({}, {}): {:?}, {}",
-                    token.start,
-                    token.end,
-                    token.scopes,
-                    &line[token.start..token.end]
-                );
-            }
-            self.tokengen = TokenGenerator::new();
+            line_tokens.push(self.tokenize_line(line));
         }
+        line_tokens
     }
 
-    fn tokenize_line(&mut self, line: &str) {
-        let n = line.len();
-        let mut offset = 0;
-        while offset < n {
-            match self.tokenize_next(&line[offset..n], offset) {
-                Some(pos) => offset = pos,
+    pub fn tokenize_line(&mut self, line: &str) -> Vec<Token> {
+        self.tokenize_string(line, 0);
+
+        let tokens: Vec<Token> = self.tokengen.tokens.drain(..).collect();
+        self.tokengen = TokenGenerator::new();
+        tokens
+    }
+
+    fn tokenize_string(&mut self, text: &str, offset: usize) {
+        let n = text.len();
+        let mut p = 0;
+        while p < n {
+            match self.tokenize_next(&text[p..], offset + p) {
+                Some(pos) => p = pos - offset,
                 None => break,
             }
         }
     }
 
     fn tokenize_next(&mut self, text: &str, offset: usize) -> Option<usize> {
-        let state: RuleState;
-
         match self.best_match(text) {
             BestMatchResult::Pattern(m) => {
                 let pos = (m.caps.start() + offset, m.caps.end() + offset);
-                // println!("[p]pos: {:?}", pos);
                 if self.tokengen.pos < pos.0 {
                     self.tokengen.generate(pos.0, &self.state);
                 }
@@ -140,7 +127,7 @@ impl<'a> Tokenizer<'a> {
             .into_iter()
             .min_by_key(|x| x.caps.start());
         let end_match = state.end_expr.as_ref().and_then(
-            |expr| simple_match(expr, text),
+            |expr| expr.find(text)
         );
 
         match (pattern_match, end_match) {
@@ -171,7 +158,7 @@ impl<'a> Tokenizer<'a> {
                     if self.tokengen.pos < pos.0 {
                         self.tokengen.generate(pos.0, &self.state);
                     }
-                    self.tokenize_next(&text[pos.0..pos.1], offset + pos.0);
+                    self.tokenize_string(&text[pos.0..pos.1], offset + pos.0);
                     self.state.pop();
                 }
             }
@@ -182,7 +169,7 @@ impl<'a> Tokenizer<'a> {
 
 struct RuleState {
     rule: Rule,
-    end_expr: Option<String>,
+    end_expr: Option<Regex>,
 }
 
 struct State {
@@ -206,7 +193,7 @@ impl State {
     fn push(&mut self, rule: Rule, expr: Option<String>) {
         self.st.push(RuleState {
             rule: rule.clone(),
-            end_expr: expr,
+            end_expr: expr.map(|s| Regex::new(&s)),
         });
         self.scopes.push(rule.name());
     }
@@ -250,8 +237,8 @@ impl TokenGenerator {
     }
 }
 
-struct Token {
-    start: usize,
-    end: usize,
-    scopes: Vec<String>,
+pub struct Token {
+    pub start: usize,
+    pub end: usize,
+    pub scopes: Vec<String>,
 }
