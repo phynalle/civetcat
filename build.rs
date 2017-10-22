@@ -122,7 +122,11 @@ fn load_config() -> Result<Config> {
 fn read_file(path: &str) -> String {
     let mut s = String::new();
     let _ = File::open(path).unwrap().read_to_string(&mut s);
-    s.replace("\\", "\\\\").replace("\"", "\\\"")
+    s.replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace(" ", "")
+        .replace("\t", "")
+        .replace("\n", "")
 }
 
 fn raw_syntax_name(lang: &str) -> String {
