@@ -20,14 +20,14 @@ impl LangLoader {
 
     pub fn load_grammar(&self, lang: &str) -> Rc<Grammar> {
         if let Some(g) = self.grammars.borrow().get(lang) {
-            return g.clone();
+            return Rc::clone(g);
         }
         match _generated::_load_grammar(lang) {
             Ok(g) => {
                 let g = Rc::new(g);
                 self.grammars.borrow_mut().insert(
                     lang.to_owned(),
-                    g.clone(),
+                    Rc::clone(&g),
                 );
                 g
             }

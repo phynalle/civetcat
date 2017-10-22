@@ -167,7 +167,7 @@ impl Compiler {
             Inner::Match(MatchRule {
                 id: rule_id,
                 name: rule.name.clone(),
-                expr: Regex::new(&rule.match_expr.as_ref().unwrap()),
+                expr: Regex::new(rule.match_expr.as_ref().unwrap()),
                 captures: self.compile_captures(&rule.captures, repo),
             })
         } else if rule.begin.is_none() {
@@ -221,7 +221,7 @@ impl Compiler {
             for pattern in patterns {
                 let rule_id = match pattern.include {
                     None => self.compile_rule(pattern, repo),
-                    Some(ref inc) if inc.starts_with("#") => {
+                    Some(ref inc) if inc.starts_with('#') => {
                         match repo.get(&inc[1..]) {
                             Some(rule) => self.compile_rule(rule, repo),
                             None => panic!("pattern {} not Found in the repository", inc),

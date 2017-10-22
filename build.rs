@@ -36,8 +36,8 @@ pub fn _load_grammar(lang: &str) -> Result<Grammar> {{
     }}
 }}
 
-pub fn _load_theme(theme: Theme) -> Result<ScopeTree> {{
-    match theme {{
+pub fn _load_theme(theme: &Theme) -> Result<ScopeTree> {{
+    match *theme {{
 {}
     }}
 }}

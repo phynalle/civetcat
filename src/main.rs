@@ -5,13 +5,13 @@
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
-extern crate pcre;
 extern crate onig;
 
 #[macro_use]
 extern crate lazy_static;
 
 use std::fs::File;
+use std::rc::Rc;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::iter::Iterator;
@@ -78,7 +78,7 @@ fn run(mut parsed: Parsed) {
                     match grammar {
                         Some(g) => {
                             printer.print(file, |s| {
-                                let mut pl = Pipeline::new(theme::load(), g.clone());
+                                let mut pl = Pipeline::new(theme::load(), Rc::clone(&g));
                                 pl.process_line(s)
                             });
                         }
