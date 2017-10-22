@@ -58,7 +58,6 @@ impl<'a> Tokenizer<'a> {
 
     pub fn tokenize(&mut self, s: &str) {
         for line in s.lines() {
-            println!("line: {}", line);
             self.tokenize_line(line);
             for token in &self.tokengen.tokens {
                 println!(
@@ -120,8 +119,7 @@ impl<'a> Tokenizer<'a> {
                     rule.do_beginend(|r| {
                         self.process_capture(text, offset, &m.captures, &r.end_captures);
                     });
-                }
-                self.state.pop();
+                } self.state.pop();
                 self.tokengen.generate(pos.1, &self.state);
 
                 Some(pos.1)
@@ -214,7 +212,7 @@ impl State {
             rule: rule.clone(),
             end_expr: expr,
         });
-        self.scopes.push(r.name());
+        self.scopes.push(rule.name());
     }
 
     fn pop(&mut self) {
