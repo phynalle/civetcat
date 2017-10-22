@@ -12,15 +12,19 @@ macro_rules! skeleton {
     () => (
 "use std::collections::HashMap;
 use std::io::Result;
-use syntax::Syntax;
-use tokenizer::Grammar;
+use syntax::grammar::{{Grammar, load_grammar}};
+use colorizer::{{ScopeTree, load_theme}};
+
+pub enum Theme {{
+{}
+}} 
 
 {}
 
 lazy_static! {{
-    pub static ref EXT_LANG_MAP: HashMap<&'static str, &'static str> = {{
-        let mut m = HashMap::new();
-{}
+    pub static ref EXT_LANG_MAP: HashMap<&'static str, &'static str> = {{ 
+        let mut m = HashMap::new(); 
+        {}
         m
     }};
 }}
@@ -32,7 +36,14 @@ pub fn _load_grammar(lang: &str) -> Result<Grammar> {{
     }}
 }}
 
+pub fn _load_theme(theme: Theme) -> Result<ScopeTree> {{
+    match theme {{
 {}
+    }}
+}}
+
+{}
+
 ");
 }
 
@@ -42,26 +53,40 @@ fn main() {
     let mut ext = String::new();
     let mut lg = String::new();
     let mut func = String::new();
+    let mut lt = String::new();
+
+    let mut theme_def = String::new();
 
     for lang in config.languages {
-        let _raw = raw_name(&lang.name);
-        let _fn = func_name(&lang.name);
+        let _raw = raw_syntax_name(&lang.name);
+        let _fn = syntax_func_name(&lang.name);
 
         raw.push_str(&format!("const {}: &'static str = \"{}\";\n", _raw, read_file(&lang.path)));
         lg.push_str(&format!("        \"{}\" => {}(),\n", lang.name, _fn));
-        func.push_str(&gen_load_func(&_fn, &_raw));
+        func.push_str(&gen_load_syntax_func(&_fn, &_raw));
         for e in lang.extensions {
             ext.push_str(&format!("        m.insert(\"{}\", \"{}\");\n", e, lang.name));
         }
     }
 
+    for theme in config.themes {
+        let _raw = raw_theme_name(&theme.name);
+        let _fn = theme_func_name(&theme.name);
+
+        raw.push_str(&format!("const {}: &'static str = \"{}\";\n", _raw, read_file(&theme.path)));
+        theme_def.push_str(&format!("    {}\n", theme.name));
+        lt.push_str(&format!("        Theme::{} => {}(),\n", theme.name, _fn));
+        func.push_str(&gen_load_theme_func(&theme.name));
+    }
+
     let mut f = File::create("src/_generated.rs").unwrap();
-    let _ = f.write_fmt(format_args!(skeleton!(), raw, ext, lg, func));
+    let _ = f.write_fmt(format_args!(skeleton!(), theme_def, raw, ext, lg, lt, func));
 }
 
 #[derive(Deserialize, Debug, Clone)]
 struct Config {
     languages: Vec<Language>,
+    themes: Vec<Theme>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -69,6 +94,12 @@ struct Language {
     name: String,
     path: String,
     extensions: Vec<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct Theme {
+    name: String,
+    path: String,
 }
 
 fn load_config() -> Result<Config> {
@@ -82,19 +113,36 @@ fn read_file(path: &str) -> String {
     s.replace("\\", "\\\\").replace("\"", "\\\"")
 }
 
-fn raw_name(lang: &str) -> String {
+fn raw_syntax_name(lang: &str) -> String {
     format!("RAW_{}_SYNTAX", lang.to_uppercase())
 }
 
-fn func_name(lang: &str) -> String {
+fn syntax_func_name(lang: &str) -> String {
     format!("_load_{}_grammar", lang.to_lowercase())
 }
 
-fn gen_load_func(_fn: &str, _func: &str) -> String {
+fn gen_load_syntax_func(_fn: &str, _raw_name: &str) -> String {
     format!(
 "fn {}() -> Result<Grammar> {{
-    let syntax = Syntax::from_text({})?;
-    Ok(syntax.compact())
+    load_grammar({})
 }}
-", _fn, _func)
+", _fn, _raw_name)
 }
+
+fn raw_theme_name(theme: &str) -> String {
+    format!("RAW_{}_THEME", theme.to_uppercase())
+}
+
+fn theme_func_name(theme: &str) -> String {
+    format!("_load_{}_theme", theme.to_lowercase())
+}
+
+fn gen_load_theme_func(theme: &str) -> String {
+    format!(
+"fn {}() -> Result<ScopeTree> {{
+    load_theme({})
+}}
+", &theme_func_name(theme), &raw_theme_name(theme))
+}
+
+

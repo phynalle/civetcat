@@ -119,7 +119,8 @@ impl<'a> Tokenizer<'a> {
                     rule.do_beginend(|r| {
                         self.process_capture(text, offset, &m.captures, &r.end_captures);
                     });
-                } self.state.pop();
+                }
+                self.state.pop();
                 self.tokengen.generate(pos.1, &self.state);
 
                 Some(pos.1)
@@ -165,18 +166,13 @@ impl<'a> Tokenizer<'a> {
     ) {
         for (i, cap) in captured.into_iter().enumerate() {
             if let Some(pos) = *cap {
-                if let Some(capture) = capture_group.0.get(&i) {
-                    if capture.rule_id.is_some() {
-                        self.state.push(
-                            self.grammar.rule(capture.rule_id.unwrap()),
-                            None,
-                        );
-                        if self.tokengen.pos < pos.0 {
-                            self.tokengen.generate(pos.0, &self.state);
-                        }
-                        self.tokenize_next(&text[pos.0..pos.1], offset + pos.0);
-                        self.state.pop();
+                if let Some(rule_id) = capture_group.0.get(&i) {
+                    self.state.push(self.grammar.rule(*rule_id), None);
+                    if self.tokengen.pos < pos.0 {
+                        self.tokengen.generate(pos.0, &self.state);
                     }
+                    self.tokenize_next(&text[pos.0..pos.1], offset + pos.0);
+                    self.state.pop();
                 }
             }
         }
