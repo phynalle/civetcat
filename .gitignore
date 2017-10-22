@@ -1,5 +1,7 @@
 target
 .vscode
 main
+.*.swp
 
 _generated.rs
+

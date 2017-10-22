@@ -14,5 +14,11 @@
                 "go"
             ]
         }
+    ],
+    "themes":[
+        {
+            "name":"KimbieDark",
+            "path":"themes/Kimbie_dark.json"
+        }
     ]
 }
