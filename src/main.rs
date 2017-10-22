@@ -46,9 +46,11 @@ fn main() {
         Ok(parsed) => run(parsed),
         Err(e) => {
             print_error(&e);
-            let _ = writeln!(&mut std::io::stderr(),
-                             "usage: {} [-n] [file ...]",
-                             get_exe_name());
+            let _ = writeln!(
+                &mut std::io::stderr(),
+                "usage: {} [-n] [file ...]",
+                get_exe_name()
+            );
         }
     }
 }
@@ -66,7 +68,8 @@ fn run(mut parsed: Parsed) {
             printer.print(std::io::stdin(), |s| s.to_owned());
         } else {
             match File::open(file_name.clone()) {
-                Ok(file) => { let path = Path::new(file_name);
+                Ok(file) => {
+                    let path = Path::new(file_name);
                     let grammar = path.extension()
                         .and_then(|ext| ext.to_str())
                         .and_then(|ext| lang::identify(ext))

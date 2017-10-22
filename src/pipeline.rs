@@ -11,10 +11,7 @@ pub struct Pipeline {
 
 impl Pipeline {
     pub fn new(scopes: ScopeTree, grammar: Rc<Grammar>) -> Pipeline {
-        Pipeline {
-            scopes,
-            grammar,
-        }
+        Pipeline { scopes, grammar }
     }
 
     #[allow(dead_code)]
@@ -49,7 +46,8 @@ impl Pipeline {
         let tokens = tok.tokenize_line(line);
         let tokens: Vec<_> = tokens
             .into_iter()
-            .map(|t| { let style = self.scopes.style(&t.scopes);
+            .map(|t| {
+                let style = self.scopes.style(&t.scopes);
                 (t.start, t.end, style)
             })
             .collect();

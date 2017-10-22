@@ -274,4 +274,3 @@ pub struct RawRule {
     pub patterns: Option<Vec<RawRule>>,
     pub repository: Option<HashMap<String, RawRule>>,
 }
-

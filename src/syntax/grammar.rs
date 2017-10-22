@@ -126,9 +126,7 @@ impl<'a> Tokenizer<'a> {
             .match_subpatterns(text, &self.grammar.rules)
             .into_iter()
             .min_by_key(|x| x.caps.start());
-        let end_match = state.end_expr.as_ref().and_then(
-            |expr| expr.find(text)
-        );
+        let end_match = state.end_expr.as_ref().and_then(|expr| expr.find(text));
 
         match (pattern_match, end_match) {
             (None, None) => BestMatchResult::None,

@@ -37,8 +37,3 @@ impl MatchResult {
         self.captures[0].unwrap().1
     }
 }
-
-pub fn simple_match(pattern: &str, text: &str) -> Option<MatchResult> {
-    Regex::new(pattern).find(text)
-}
-

@@ -17,13 +17,13 @@ use colorizer::{{ScopeTree, load_theme}};
 
 pub enum Theme {{
 {}
-}} 
+}}
 
 {}
 
 lazy_static! {{
-    pub static ref EXT_LANG_MAP: HashMap<&'static str, &'static str> = {{ 
-        let mut m = HashMap::new(); 
+    pub static ref EXT_LANG_MAP: HashMap<&'static str, &'static str> = {{
+        let mut m = HashMap::new();
         {}
         m
     }};
@@ -61,11 +61,19 @@ fn main() {
         let _raw = raw_syntax_name(&lang.name);
         let _fn = syntax_func_name(&lang.name);
 
-        raw.push_str(&format!("const {}: &'static str = \"{}\";\n", _raw, read_file(&lang.path)));
+        raw.push_str(&format!(
+            "const {}: &'static str = \"{}\";\n",
+            _raw,
+            read_file(&lang.path)
+        ));
         lg.push_str(&format!("        \"{}\" => {}(),\n", lang.name, _fn));
-        func.push_str(&gen_load_syntax_func(&_fn, &_raw));
+        func.push_str(&gen_load_syntax_func(&lang.name));
         for e in lang.extensions {
-            ext.push_str(&format!("        m.insert(\"{}\", \"{}\");\n", e, lang.name));
+            ext.push_str(&format!(
+                "        m.insert(\"{}\", \"{}\");\n",
+                e,
+                lang.name
+            ));
         }
     }
 
@@ -73,7 +81,11 @@ fn main() {
         let _raw = raw_theme_name(&theme.name);
         let _fn = theme_func_name(&theme.name);
 
-        raw.push_str(&format!("const {}: &'static str = \"{}\";\n", _raw, read_file(&theme.path)));
+        raw.push_str(&format!(
+            "const {}: &'static str = \"{}\";\n",
+            _raw,
+            read_file(&theme.path)
+        ));
         theme_def.push_str(&format!("    {}\n", theme.name));
         lt.push_str(&format!("        Theme::{} => {}(),\n", theme.name, _fn));
         func.push_str(&gen_load_theme_func(&theme.name));
@@ -121,12 +133,15 @@ fn syntax_func_name(lang: &str) -> String {
     format!("_load_{}_grammar", lang.to_lowercase())
 }
 
-fn gen_load_syntax_func(_fn: &str, _raw_name: &str) -> String {
+fn gen_load_syntax_func(lang: &str) -> String {
     format!(
-"fn {}() -> Result<Grammar> {{
+        "fn {}() -> Result<Grammar> {{
     load_grammar({})
 }}
-", _fn, _raw_name)
+",
+        &syntax_func_name(lang),
+        &raw_syntax_name(lang)
+    )
 }
 
 fn raw_theme_name(theme: &str) -> String {
@@ -139,10 +154,11 @@ fn theme_func_name(theme: &str) -> String {
 
 fn gen_load_theme_func(theme: &str) -> String {
     format!(
-"fn {}() -> Result<ScopeTree> {{
+        "fn {}() -> Result<ScopeTree> {{
     load_theme({})
 }}
-", &theme_func_name(theme), &raw_theme_name(theme))
+",
+        &theme_func_name(theme),
+        &raw_theme_name(theme)
+    )
 }
-
-
