@@ -6,6 +6,7 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate onig;
+extern crate atty;
 
 #[macro_use]
 extern crate lazy_static;
@@ -16,6 +17,7 @@ use std::io::BufReader;
 use std::io::prelude::*;
 use std::iter::Iterator;
 use std::path::Path;
+use atty::Stream;
 
 mod lang;
 mod theme;
@@ -69,21 +71,25 @@ fn run(mut parsed: Parsed) {
         } else {
             match File::open(file_name.clone()) {
                 Ok(file) => {
-                    let path = Path::new(file_name);
-                    let grammar = path.extension()
-                        .and_then(|ext| ext.to_str())
-                        .and_then(|ext| lang::identify(ext))
-                        .map(|ln| ll.load_grammar(ln));
+                    if !atty::is(Stream::Stdout) {
+                        printer.print(file, |s| s.to_owned());
+                    } else {
+                        let path = Path::new(file_name);
+                        let grammar = path.extension()
+                            .and_then(|ext| ext.to_str())
+                            .and_then(|ext| lang::identify(ext))
+                            .map(|ln| ll.load_grammar(ln));
 
-                    match grammar {
-                        Some(g) => {
-                            printer.print(file, |s| {
-                                let mut pl = Pipeline::new(theme::load(), Rc::clone(&g));
-                                pl.process_line(s)
-                            });
-                        }
-                        None => {
-                            printer.print(file, |s| s.to_owned());
+                        match grammar {
+                            Some(g) => {
+                                printer.print(file, |s| {
+                                    let mut pl = Pipeline::new(theme::load(), Rc::clone(&g));
+                                    pl.process_line(s)
+                                });
+                            }
+                            None => {
+                                printer.print(file, |s| s.to_owned());
+                            }
                         }
                     }
                 }

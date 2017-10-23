@@ -15,6 +15,7 @@ serde_derive = "1.0"
 serde_json = "1.0"
 lazy_static = "0.2"
 onig = "2.0"
+atty = "0.2.3"
 
 [build-dependencies]
 serde = "1.0"
