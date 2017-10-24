@@ -88,7 +88,15 @@ impl<'a> Tokenizer<'a> {
                     self.state.pop();
                 });
                 rule.do_beginend(|r| {
-                    self.state.push(rule.clone(), Some(r.end_expr.clone()));
+                    let mut s: String = r.end_expr.clone();
+                    for (i, cap) in m.caps.captures.iter().enumerate().skip(1) {
+                        if let Some(ref cap) = *cap {
+                            let old = format!("\\{}", i);
+                            let new = text.substr(cap.0, cap.1 - cap.0);
+                            s = s.replace(&old, &new);
+                        }
+                    }
+                    self.state.push(rule.clone(), Some(s));
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.tokengen.generate(pos.1, &self.state);
                 });
