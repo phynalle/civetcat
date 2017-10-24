@@ -1,4 +1,5 @@
 use onig;
+use syntax::str_piece::StrPiece;
 
 pub struct Regex {
     re: onig::Regex,
@@ -11,8 +12,8 @@ impl Regex {
         }
     }
 
-    pub fn find(&self, text: &str) -> Option<MatchResult> {
-        self.re.captures(text).map(|cap| {
+    pub fn find<'a>(&self, text: StrPiece<'a>) -> Option<MatchResult> {
+        self.re.captures(&text).map(|cap| {
             let mut captures = Vec::new();
             for pos in cap.iter_pos() {
                 captures.push(pos);

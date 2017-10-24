@@ -2,6 +2,7 @@ use std::io::Result;
 use serde_json;
 use syntax::rule::{self, Compiler, Rule, RuleId, RawRule, CaptureGroup};
 use syntax::regex::{self, Regex};
+use syntax::str_piece::StrPiece;
 
 pub fn load_grammar(raw_text: &str) -> Result<Grammar> {
     let mut rule: RawRule = serde_json::from_str(raw_text)?;
@@ -55,28 +56,26 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn tokenize_line(&mut self, line: &str) -> Vec<Token> {
-        self.tokenize_string(line, 0);
+        self.tokenize_string(StrPiece::new(line));
 
         let tokens: Vec<Token> = self.tokengen.tokens.drain(..).collect();
         self.tokengen = TokenGenerator::new();
         tokens
     }
 
-    fn tokenize_string(&mut self, text: &str, offset: usize) {
-        let n = text.len();
-        let mut p = 0;
-        while p < n {
-            match self.tokenize_next(&text[p..], offset + p) {
-                Some(pos) => p = pos - offset,
+    fn tokenize_string<'b>(&mut self, mut text: StrPiece<'b>) {
+        loop {
+            match self.tokenize_next(text) {
+                Some(pos) => text.remove_prefix(pos),
                 None => break,
             }
         }
     }
 
-    fn tokenize_next(&mut self, text: &str, offset: usize) -> Option<usize> {
+    fn tokenize_next<'b>(&mut self, text: StrPiece<'b>) -> Option<usize> {
         match self.best_match(text) {
             BestMatchResult::Pattern(m) => {
-                let pos = (m.caps.start() + offset, m.caps.end() + offset);
+                let pos = (m.caps.start() + text.start(), m.caps.end() + text.start());
                 if self.tokengen.pos < pos.0 {
                     self.tokengen.generate(pos.0, &self.state);
                 }
@@ -84,42 +83,42 @@ impl<'a> Tokenizer<'a> {
                 let rule = self.grammar.rule(m.rule);
                 rule.do_match(|r| {
                     self.state.push(rule.clone(), None);
-                    self.process_capture(text, offset, &m.caps.captures, &r.captures);
+                    self.process_capture(text, &m.caps.captures, &r.captures);
                     self.tokengen.generate(pos.1, &self.state);
                     self.state.pop();
                 });
                 rule.do_beginend(|r| {
                     self.state.push(rule.clone(), Some(r.end_expr.clone()));
-                    self.process_capture(text, offset, &m.caps.captures, &r.begin_captures);
+                    self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.tokengen.generate(pos.1, &self.state);
                 });
 
-                Some(pos.1)
+                Some(m.caps.end())
             }
             BestMatchResult::End(m) => {
-                let pos = (m.start() + offset, m.end() + offset);
+                let pos = (m.start() + text.start(), m.end() + text.start());
                 if self.tokengen.pos < pos.0 {
                     self.tokengen.generate(pos.0, &self.state);
                 }
                 {
                     let rule = self.state.current().rule.clone();
                     rule.do_beginend(|r| {
-                        self.process_capture(text, offset, &m.captures, &r.end_captures);
+                        self.process_capture(text, &m.captures, &r.end_captures);
                     });
                 }
                 self.state.pop();
                 self.tokengen.generate(pos.1, &self.state);
 
-                Some(pos.1)
+                Some(m.end())
             }
             BestMatchResult::None => {
-                self.tokengen.generate(offset + text.len(), &self.state);
+                self.tokengen.generate(text.start() + text.len(), &self.state);
                 None
             }
         }
     }
 
-    fn best_match(&mut self, text: &str) -> BestMatchResult {
+    fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
         let state = self.state.current();
         let pattern_match = state
             .rule
@@ -142,10 +141,9 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn process_capture(
+    fn process_capture<'b>(
         &mut self,
-        text: &str,
-        offset: usize,
+        text: StrPiece<'b>,
         captured: &[Option<(usize, usize)>],
         capture_group: &CaptureGroup,
     ) {
@@ -156,7 +154,7 @@ impl<'a> Tokenizer<'a> {
                     if self.tokengen.pos < pos.0 {
                         self.tokengen.generate(pos.0, &self.state);
                     }
-                    self.tokenize_string(&text[pos.0..pos.1], offset + pos.0);
+                    self.tokenize_string(text.substr(pos.0, pos.1 - pos.0));
                     self.state.pop();
                 }
             }

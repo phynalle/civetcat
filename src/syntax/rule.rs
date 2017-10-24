@@ -3,6 +3,7 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use syntax::grammar::Grammar;
 use syntax::regex::{self, Regex};
+use syntax::str_piece::StrPiece;
 
 pub type RuleId = usize;
 
@@ -37,7 +38,7 @@ impl Rule {
         }
     }
 
-    pub fn match_patterns(&self, text: &str, rules: &[Rule]) -> Vec<MatchResult> {
+    pub fn match_patterns<'a>(&self, text: StrPiece<'a>, rules: &[Rule]) -> Vec<MatchResult> {
         let mut match_results = Vec::new();
         match *self.inner {
             Inner::Include(ref r) => {
@@ -67,7 +68,7 @@ impl Rule {
         match_results
     }
 
-    pub fn match_subpatterns(&self, text: &str, rules: &[Rule]) -> Vec<MatchResult> {
+    pub fn match_subpatterns<'a>(&self, text: StrPiece<'a>, rules: &[Rule]) -> Vec<MatchResult> {
         match *self.inner {
             Inner::Include(_) => self.match_patterns(text, rules),
             Inner::Match(_) => Vec::new(),
