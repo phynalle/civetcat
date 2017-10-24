@@ -6,10 +6,11 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate onig;
-extern crate atty;
-
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate clap;
+extern crate atty;
 
 use std::fs::File;
 use std::rc::Rc;
@@ -26,6 +27,7 @@ mod syntax;
 mod colorizer;
 mod pipeline;
 mod _generated;
+mod app;
 
 use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
@@ -41,20 +43,7 @@ struct Parsed {
 }
 
 fn main() {
-    let args: Vec<_> = std::env::args().skip(1).collect();
-    let result = parse_options(args);
-
-    match result {
-        Ok(parsed) => run(parsed),
-        Err(e) => {
-            print_error(&e);
-            let _ = writeln!(
-                &mut std::io::stderr(),
-                "usage: {} [-n] [file ...]",
-                get_exe_name()
-            );
-        }
-    }
+    run(parse_options());
 }
 
 fn run(mut parsed: Parsed) {
@@ -118,31 +107,23 @@ fn get_exe_name() -> String {
         .unwrap_or_else(|| EXECUTABLE_NAME.to_owned())
 }
 
-fn parse_options(mut flags: Vec<String>) -> Result<Parsed, String> {
-    let mut options = Options { display_number: false };
-    while !flags.is_empty() {
-        {
-            let first = &flags[0];
-            if !first.starts_with('-') || first.len() == 1 {
-                break;
-            }
-        }
+fn parse_options() -> Parsed {
+    let matches = app::initialize().get_matches();
 
-        let s = flags.remove(0);
-        for c in s[1..].chars() {
-            if c == 'n' {
-                options.display_number = true;
-            } else {
-                return Err(format!("illegal option -- {}", c));
-            }
-        }
+    let mut options = Options { display_number: false };
+    if matches.occurrences_of("number") > 0 {
+        options.display_number = true;
     }
 
-    let parsed = Parsed {
-        options: options,
-        file_names: flags,
-    };
-    Ok(parsed)
+    let file_names = matches
+        .values_of("file")
+        .map(|values| values.map(|v| v.to_owned()).collect::<Vec<_>>())
+        .unwrap_or_else(|| vec!["-".to_owned()]);
+ 
+    Parsed {
+        options,
+        file_names,
+    }
 }
 
 struct ColorPrinter {
