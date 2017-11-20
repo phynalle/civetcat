@@ -118,8 +118,8 @@ impl<'a> Tokenizer<'a> {
                         self.process_capture(text, &m.captures, &r.end_captures);
                     });
                 }
-                self.state.pop();
                 self.tokengen.generate(pos.1, &self.state);
+                self.state.pop();
                 Some(m.end())
             }
             BestMatchResult::None => {
@@ -244,6 +244,7 @@ impl TokenGenerator {
     }
 }
 
+#[derive(Debug)]
 pub struct Token {
     pub start: usize,
     pub end: usize,
