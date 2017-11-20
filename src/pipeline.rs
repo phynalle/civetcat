@@ -27,7 +27,6 @@ impl Pipeline {
                         (t.start, t.end, style)
                     })
                     .collect();
-                // v.sort_by(|&(ax, ay, _), &(bx, by, _)| (ax, ay).cmp(&(bx, by)));
                 (line, v)
             })
             .map(|(line, tokens)| {

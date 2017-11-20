@@ -6,7 +6,7 @@ use syntax::str_piece::StrPiece;
 
 pub fn load_grammar(raw_text: &str) -> Result<Grammar> {
     let mut rule: RawRule = serde_json::from_str(raw_text)?;
-    let mut c = Compiler::new();
+    let mut c = Compiler::new("source.c");
     Ok(c.compile(&mut rule))
 }
 
@@ -14,7 +14,12 @@ pub struct Grammar {
     root_id: RuleId,
     rules: Vec<Rule>,
 }
+
 impl Grammar {
+    pub fn loads<T: AsRef<str>>(scope_name: T) {
+        let scope_name = scope_name.as_ref();
+    }
+
     pub fn new(rules: Vec<Rule>, root_id: RuleId) -> Grammar {
         Grammar { root_id, rules }
     }
@@ -100,7 +105,6 @@ impl<'a> Tokenizer<'a> {
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.tokengen.generate(pos.1, &self.state);
                 });
-
                 Some(m.caps.end())
             }
             BestMatchResult::End(m) => {
@@ -116,11 +120,10 @@ impl<'a> Tokenizer<'a> {
                 }
                 self.state.pop();
                 self.tokengen.generate(pos.1, &self.state);
-
                 Some(m.end())
             }
             BestMatchResult::None => {
-                self.tokengen.generate(text.start() + text.len(), &self.state);
+                self.tokengen.generate(text.end(), &self.state);
                 None
             }
         }
@@ -128,11 +131,11 @@ impl<'a> Tokenizer<'a> {
 
     fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
         let state = self.state.current();
-        let pattern_match = state
-            .rule
-            .match_subpatterns(text, &self.grammar.rules)
-            .into_iter()
-            .min_by_key(|x| x.caps.start());
+        let pattern_match = state.rule.match_subpatterns(text).into_iter().min_by_key(
+            |x| {
+                x.caps.start()
+            },
+        );
         let end_match = state.end_expr.as_ref().and_then(|expr| expr.find(text));
 
         match (pattern_match, end_match) {
@@ -157,8 +160,8 @@ impl<'a> Tokenizer<'a> {
     ) {
         for (i, cap) in captured.into_iter().enumerate() {
             if let Some(pos) = *cap {
-                if let Some(rule_id) = capture_group.0.get(&i) {
-                    self.state.push(self.grammar.rule(*rule_id), None);
+                if let Some(rule) = capture_group.0.get(&i) {
+                    self.state.push(rule.upgrade().unwrap(), None);
                     if self.tokengen.pos < pos.0 {
                         self.tokengen.generate(pos.0, &self.state);
                     }

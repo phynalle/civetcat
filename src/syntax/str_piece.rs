@@ -14,22 +14,24 @@ impl<'a> StrPiece<'a> {
 
     pub fn with(s: &'a str, pos: usize, len: usize) -> StrPiece {
         assert!(pos + len <= s.len());
-        StrPiece {
-            s,
-            pos,
-            len,
-        }
+        StrPiece { s, pos, len }
     }
 
-    pub fn start(&self) -> usize { self.pos }
-    pub fn end(&self) -> usize { self.pos + self.len }
-    pub fn len(&self) -> usize { self.len }
+    pub fn start(&self) -> usize {
+        self.pos
+    }
+    pub fn end(&self) -> usize {
+        self.s.len()
+    }
+    pub fn len(&self) -> usize {
+        self.len
+    }
 
     pub fn substr(&self, pos: usize, len: usize) -> StrPiece<'a> {
         assert!(self.len >= pos);
         StrPiece::with(self.s, self.pos + pos, len)
     }
-    
+
     pub fn remove_prefix(&mut self, n: usize) {
         assert!(self.len >= n);
         self.pos += n;
@@ -42,7 +44,7 @@ impl<'a> StrPiece<'a> {
     }
 
     pub fn get(&self) -> &'a str {
-        &self.s[self.pos..self.pos+self.len]
+        &self.s[self.pos..self.pos + self.len]
     }
 }
 
@@ -50,7 +52,7 @@ impl<'a> Deref for StrPiece<'a> {
     type Target = str;
     fn deref(&self) -> &Self::Target {
         self.get()
-    } 
+    }
 }
 
 #[cfg(test)]

@@ -20,14 +20,15 @@ use std::iter::Iterator;
 use std::path::Path;
 use atty::Stream;
 
+mod lazy;
 mod lang;
 mod theme;
+mod app;
 mod parser;
 mod syntax;
 mod colorizer;
 mod pipeline;
 mod _generated;
-mod app;
 
 use pipeline::Pipeline;
 static EXECUTABLE_NAME: &'static str = "cv";
@@ -54,31 +55,29 @@ fn run(mut parsed: Parsed) {
     }
 
     for file_name in &parsed.file_names {
-        let mut printer = ColorPrinter::new(parsed.options);
+        let mut printer = Printer::new(parsed.options);
         if file_name == "-" {
             printer.print(std::io::stdin(), |s| s.to_owned());
         } else {
             match File::open(file_name.clone()) {
                 Ok(file) => {
-                    if !atty::is(Stream::Stdout) {
-                        printer.print(file, |s| s.to_owned());
-                    } else {
-                        let path = Path::new(file_name);
-                        let grammar = path.extension()
-                            .and_then(|ext| ext.to_str())
-                            .and_then(|ext| lang::identify(ext))
-                            .map(|ln| ll.load_grammar(ln));
+                    let path = Path::new(file_name);
+                    let grammar = path.extension()
+                        .and_then(|ext| ext.to_str())
+                        .and_then(|ext| lang::identify(ext))
+                        .map(|ln| ll.load_grammar(ln));
 
-                        match grammar {
-                            Some(g) => {
-                                printer.print(file, |s| {
-                                    let mut pl = Pipeline::new(theme::load(), Rc::clone(&g));
-                                    pl.process_line(s)
-                                });
-                            }
-                            None => {
-                                printer.print(file, |s| s.to_owned());
-                            }
+                    match grammar {
+                        Some(g) => {
+                            printer.print(file, |s| if atty::is(Stream::Stdout) {
+                                let mut pl = Pipeline::new(theme::load(), Rc::clone(&g));
+                                pl.process_line(&s)
+                            } else {
+                                s.to_owned()
+                            });
+                        }
+                        None => {
+                            printer.print(file, |s| s.to_owned());
                         }
                     }
                 }
@@ -119,20 +118,20 @@ fn parse_options() -> Parsed {
         .values_of("file")
         .map(|values| values.map(|v| v.to_owned()).collect::<Vec<_>>())
         .unwrap_or_else(|| vec!["-".to_owned()]);
- 
+
     Parsed {
         options,
         file_names,
     }
 }
 
-struct ColorPrinter {
+struct Printer {
     options: Options,
 }
 
-impl ColorPrinter {
-    fn new(options: Options) -> ColorPrinter {
-        ColorPrinter { options }
+impl Printer {
+    fn new(options: Options) -> Printer {
+        Printer { options }
     }
 
     fn print<R: Read, F: Fn(&str) -> String>(&mut self, r: R, f: F) {

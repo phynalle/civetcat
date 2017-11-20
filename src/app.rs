@@ -7,9 +7,6 @@ pub fn initialize() -> App<'static, 'static> {
         .version(crate_version!())
         .author(crate_authors!())
         .about(ABOUT)
-        .arg(Arg::with_name("number")
-             .short("n")
-             .help("show line number"))
-        .arg(Arg::with_name("file")
-             .multiple(true))
+        .arg(Arg::with_name("number").short("n").help("show line number"))
+        .arg(Arg::with_name("file").multiple(true))
 }

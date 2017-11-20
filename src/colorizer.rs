@@ -229,7 +229,6 @@ impl<'a> TextColorizer<'a> {
     }
 
     fn top(&self) -> Option<&'a (usize, usize, Style)> {
-        // self.stack.iter().rev().nth(1)
         if self.stack.is_empty() {
             None
         } else {
