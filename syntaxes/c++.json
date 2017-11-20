@@ -26,7 +26,7 @@
 		"tpp"
 	],
 	"firstLineMatch": "(?i)-\\*-[^*]*(Mode:\\s*)?C\\+\\+(\\s*;.*?)?\\s*-\\*-",
-	"name": "C++",
+	"name": "Cpp",
 	"patterns": [
 		{
 			"include": "#special_block"

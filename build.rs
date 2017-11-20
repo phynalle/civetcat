@@ -24,9 +24,16 @@ pub enum Theme {{
 lazy_static! {{
     pub static ref EXT_LANG_MAP: HashMap<&'static str, &'static str> = {{
         let mut m = HashMap::new();
-        {}
+{}
         m
     }};
+}}
+
+pub fn retrieve_syntax(lang: &str) -> &'static str {{
+    match lang {{
+{}
+        _ => panic!(\"undefined language: {{}}\", lang),
+    }}
 }}
 
 pub fn _load_grammar(lang: &str) -> Result<Grammar> {{
@@ -54,25 +61,29 @@ fn main() {
     let mut lg = String::new();
     let mut func = String::new();
     let mut lt = String::new();
+    let mut syn_mat = String::new();
 
     let mut theme_def = String::new();
 
-    for lang in config.languages {
+    for path in config.languages {
+        let lang = load_language(&path).expect(&format!("{} not found", path));
         let _raw = raw_syntax_name(&lang.name);
         let _fn = syntax_func_name(&lang.name);
 
         raw.push_str(&format!(
             "const {}: &'static str = \"{}\";\n",
             _raw,
-            read_file(&lang.path)
+            read_file(&path)
         ));
-        lg.push_str(&format!("        \"{}\" => {}(),\n", lang.name, _fn));
-        func.push_str(&gen_load_syntax_func(&lang.name));
-        for e in lang.extensions {
+        syn_mat.push_str(&format!("        \"{}\" => {},\n", lang.scope_name, _raw));
+        lg.push_str(&format!("        \"{}\" => {}(),\n", lang.scope_name, _fn));
+        func.push_str(&format!("{}\n", gen_load_syntax_func(&lang.name)));
+
+        for e in lang.file_types {
             ext.push_str(&format!(
                 "        m.insert(\"{}\", \"{}\");\n",
                 e,
-                lang.name
+                lang.scope_name
             ));
         }
     }
@@ -80,32 +91,31 @@ fn main() {
     for theme in config.themes {
         let _raw = raw_theme_name(&theme.name);
         let _fn = theme_func_name(&theme.name);
-
-        raw.push_str(&format!(
-            "const {}: &'static str = \"{}\";\n",
+raw.push_str(&format!( "const {}: &'static str = \"{}\";\n",
             _raw,
             read_file(&theme.path)
         ));
         theme_def.push_str(&format!("    {}\n", theme.name));
         lt.push_str(&format!("        Theme::{} => {}(),\n", theme.name, _fn));
-        func.push_str(&gen_load_theme_func(&theme.name));
+        func.push_str(&format!("{}\n", gen_load_theme_func(&theme.name)));
     }
 
     let mut f = File::create("src/_generated.rs").unwrap();
-    let _ = f.write_fmt(format_args!(skeleton!(), theme_def, raw, ext, lg, lt, func));
+    let _ = f.write_fmt(format_args!(skeleton!(), theme_def, raw, ext, syn_mat, lg, lt, func));
 }
 
 #[derive(Deserialize, Debug, Clone)]
 struct Config {
-    languages: Vec<Language>,
+    languages: Vec<String>,
     themes: Vec<Theme>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 struct Language {
     name: String,
-    path: String,
-    extensions: Vec<String>,
+    scope_name: String,
+    file_types: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -117,6 +127,12 @@ struct Theme {
 fn load_config() -> Result<Config> {
     let file = File::open("config.json")?;
     Ok(serde_json::from_reader(file).unwrap())
+}
+
+fn load_language(path: &str) -> Result<Language> {
+    let file = File::open(path)?;
+    let lang: Language = serde_json::from_reader(file)?;
+    Ok(lang)
 }
 
 fn read_file(path: &str) -> String {

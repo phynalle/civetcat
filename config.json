@@ -1,75 +1,10 @@
 {
     "languages": [
-        {
-            "name": "Rust",
-            "path": "syntaxes/rust.json",
-            "scopeName": "source.rust",
-            "extensions": [
-                "rs"
-            ]
-        },
-        {
-            "name": "Go",
-            "path": "syntaxes/go.json",
-            "scopeName": "source.rust",
-            "extensions": [
-                "go"
-            ]
-        },
-        {
-            "name": "Cpp",
-            "path": "syntaxes/c++.json",
-            "extensions": [
-                "cc",
-                "cpp",
-                "cp",
-                "cxx",
-                "c++",
-                "cu",
-                "cuh",
-                "h",
-                "hh",
-                "hpp",
-                "hxx",
-                "h++",
-                "inl",
-                "ino",
-                "ipp",
-                "tcc",
-                "tpp"
-            ]
-        },
-        {
-            "name": "C",
-            "path": "syntaxes/c.json",
-            "extensions": [
-                "c",
-                "h.in",
-                "xpm"
-            ]
-        },
-        {
-            "name": "Python",
-            "path": "syntaxes/python.json",
-            "extensions": [
-                "py",
-                "py3",
-                "rpy",
-                "pyw",
-                "cpy",
-                "pyi",
-                "SConstruct",
-                "Sconstruct",
-                "sconstruct",
-                "SConscript",
-                "gyp",
-                "gypi",
-                "wsgi",
-                "kv",
-                "Snakefile",
-                "tac"
-            ]
-        }
+        "syntaxes/rust.json",
+        "syntaxes/go.json",
+        "syntaxes/c++.json",
+        "syntaxes/c.json",
+        "syntaxes/python.json"
     ],
     "themes": [
         {

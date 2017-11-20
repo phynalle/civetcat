@@ -7,7 +7,7 @@ use syntax::str_piece::StrPiece;
 pub fn load_grammar(raw_text: &str) -> Result<Grammar> {
     let mut rule: RawRule = serde_json::from_str(raw_text)?;
     let mut c = Compiler::new("source.c");
-    Ok(c.compile(&mut rule))
+    Ok(c.compile(rule))
 }
 
 pub struct Grammar {
