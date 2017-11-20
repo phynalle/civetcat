@@ -20,9 +20,11 @@ impl<'a> StrPiece<'a> {
     pub fn start(&self) -> usize {
         self.pos
     }
+
     pub fn end(&self) -> usize {
-        self.s.len()
+        self.pos + self.len
     }
+
     pub fn len(&self) -> usize {
         self.len
     }
