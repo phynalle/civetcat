@@ -1,7 +1,9 @@
-target
+.DS_Store
 .vscode
-main
 .*.swp
+target
+tags
+main
 
 _generated.rs
 

@@ -1,24 +1,80 @@
 {
-    "languages":[
+    "languages": [
         {
-            "name":"Rust",
-            "path":"syntaxes/rust.json",
-            "extensions":[
+            "name": "Rust",
+            "path": "syntaxes/rust.json",
+            "scopeName": "source.rust",
+            "extensions": [
                 "rs"
             ]
         },
         {
-            "name":"Go",
-            "path":"syntaxes/go.json",
-            "extensions":[
+            "name": "Go",
+            "path": "syntaxes/go.json",
+            "scopeName": "source.rust",
+            "extensions": [
                 "go"
+            ]
+        },
+        {
+            "name": "Cpp",
+            "path": "syntaxes/c++.json",
+            "extensions": [
+                "cc",
+                "cpp",
+                "cp",
+                "cxx",
+                "c++",
+                "cu",
+                "cuh",
+                "h",
+                "hh",
+                "hpp",
+                "hxx",
+                "h++",
+                "inl",
+                "ino",
+                "ipp",
+                "tcc",
+                "tpp"
+            ]
+        },
+        {
+            "name": "C",
+            "path": "syntaxes/c.json",
+            "extensions": [
+                "c",
+                "h.in",
+                "xpm"
+            ]
+        },
+        {
+            "name": "Python",
+            "path": "syntaxes/python.json",
+            "extensions": [
+                "py",
+                "py3",
+                "rpy",
+                "pyw",
+                "cpy",
+                "pyi",
+                "SConstruct",
+                "Sconstruct",
+                "sconstruct",
+                "SConscript",
+                "gyp",
+                "gypi",
+                "wsgi",
+                "kv",
+                "Snakefile",
+                "tac"
             ]
         }
     ],
-    "themes":[
+    "themes": [
         {
-            "name":"KimbieDark",
-            "path":"themes/Kimbie_dark.json"
+            "name": "KimbieDark",
+            "path": "themes/Kimbie_dark.json"
         }
     ]
 }
