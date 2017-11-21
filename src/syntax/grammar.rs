@@ -5,9 +5,13 @@ use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
 
 pub fn load_grammar(raw_text: &str) -> Result<Grammar> {
-    let mut rule: RawRule = serde_json::from_str(raw_text)?;
     let mut c = Compiler::new("source.c");
-    Ok(c.compile(rule))
+    Ok(c.compile())
+}
+
+pub fn load_grammar_from_source(src_name: &str) -> Result<Grammar> {
+    let mut c = Compiler::new(src_name);
+    Ok(c.compile())
 }
 
 pub struct Grammar {

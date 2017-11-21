@@ -1,6 +1,7 @@
 use std::rc::{Rc, Weak};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::ops::Deref;
 use serde_json;
 use syntax::grammar::Grammar;
 use syntax::regex::{self, Regex};
@@ -157,36 +158,78 @@ pub struct BeginEndRule {
 
 pub struct CaptureGroup(pub HashMap<usize, WeakRule>);
 
+struct RefWrapper<T> {
+    ptr: *const T,
+    _marker: ::std::marker::PhantomData<T>
+}
+
+impl<T> Clone for RefWrapper<T> {
+    fn clone(&self) -> RefWrapper<T> {
+        RefWrapper {
+            ptr: self.ptr,
+            _marker: ::std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T> Copy for RefWrapper<T> { }
+
+impl<T> Deref for RefWrapper<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { self.get() }
+    }
+}
+
+impl<T> RefWrapper<T> {
+    fn new(reference: &T) -> RefWrapper<T> {
+        RefWrapper {
+            ptr: reference as *const T,
+            _marker: ::std::marker::PhantomData,
+        }
+    }
+
+    unsafe fn get(&self) -> &T {
+        &*self.ptr
+    }
+}
+
 pub struct Compiler {
-    sources: HashMap<String, Rc<RawRule>>,
-    rules: HashMap<usize, Rule>,
     next_id: RuleId,
+    sources: HashMap<String, RawRule>,
+    rules: HashMap<usize, Rule>,
+    src_name: String,
 }
 
 impl Compiler {
     pub fn new(src: &str) -> Compiler {
         Compiler {
+            next_id: 0,
             sources: HashMap::new(),
             rules: HashMap::new(),
-            next_id: 0,
+            src_name: src.to_owned(),
         }
     }
 
-    fn get_source(&mut self, source: &str) -> Rc<RawRule> {
+    fn get_source(&mut self, source: &str) -> &RawRule {
         self.sources.entry(source.to_owned()).or_insert_with(
             || {
-                Rc::new(serde_json::from_str(_generated::retrieve_syntax(source)).unwrap())
-            }).clone()
+                serde_json::from_str(_generated::retrieve_syntax(source)).unwrap()
+            })
     }
 
-    pub fn compile(&mut self, raw: RawRule) -> Grammar {
-        let raw = Rc::new(raw);
-        let ctx = Context {
-            _self: raw.clone(),
-            base: raw.clone(),
+    pub fn compile(&mut self) -> Grammar {
+        let src_name = self.src_name.clone();
+        let root = {
+            let raw = RefWrapper::new(self.get_source(&src_name));
+            let ctx = Context {
+                _self: raw,
+                base: raw,
+            };
+            self.compile_rule(&*raw, ctx)
         };
 
-        let root = self.compile_rule(&*raw, ctx);
         let mut rules = Vec::new();
         for i in 0..self.next_id {
             rules.push(self.rules[&i].clone());
@@ -221,9 +264,9 @@ impl Compiler {
                 name: rule.name.clone(),
                 begin_expr: Regex::new(rule.begin.as_ref().unwrap()),
                 end_expr: rule.end.clone().unwrap(),
-                begin_captures: self.compile_captures(&rule.begin_captures, ctx.clone()),
-                end_captures: self.compile_captures(&rule.end_captures, ctx.clone()),
-                patterns: self.compile_patterns(&rule.patterns, ctx.clone()),
+                begin_captures: self.compile_captures(&rule.begin_captures, ctx),
+                end_captures: self.compile_captures(&rule.end_captures, ctx),
+                patterns: self.compile_patterns(&rule.patterns, ctx),
             })
         }
     }
@@ -252,9 +295,9 @@ impl Compiler {
         if let Some(ref patterns) = *patterns {
             for pattern in patterns {
                 let rule = match pattern.include {
-                    None => self.compile_rule(pattern, ctx.clone()),
+                    None => self.compile_rule(pattern, ctx),
                     Some(ref inc) if inc.starts_with('#') => {
-                        self.compile_rule(ctx.search_pattern(&inc[1..]), ctx.clone())
+                        self.compile_rule(ctx.search_pattern(&inc[1..]), ctx)
                     }
                     
                     Some(ref inc) if inc == "$base" => {
@@ -270,18 +313,18 @@ impl Compiler {
                             let pat = external_sources[1];
 
                             let ctx = Context { 
-                                base: Rc::clone(&ctx._self),
-                                _self: self.get_source(source),
+                                base: ctx._self, // Rc::clone(&ctx._self),
+                                _self: RefWrapper::new(self.get_source(source)),
                             };
-                            self.compile_rule(ctx.search_pattern(pat), ctx.clone())
+                            self.compile_rule(ctx.search_pattern(pat), ctx)
 
                         } else {
                             let source = inc;
                             let ctx = Context { 
-                                base: Rc::clone(&ctx._self),
-                                _self: self.get_source(source),
+                                base: ctx._self, // Rc::clone(&ctx._self),
+                                _self: RefWrapper::new(self.get_source(source)),
                             };
-                            self.compile_rule(&*ctx._self, ctx.clone())
+                            self.compile_rule(&*ctx._self, ctx)
                         }
                     } 
                 };
@@ -299,7 +342,8 @@ impl Compiler {
         let mut h = HashMap::new();
         if let Some(ref captures) = *captures {
             for (k, v) in captures {
-                h.insert(*k, self.compile_rule(v, ctx.clone()).downgrade());
+                let r = self.compile_rule(v, ctx).downgrade();
+                h.insert(*k, r);
             }
         }
         CaptureGroup(h)
@@ -312,10 +356,10 @@ impl Compiler {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct Context {
-    _self: Rc<RawRule>,
-    base: Rc<RawRule>,
+    _self: RefWrapper<RawRule>,
+    base: RefWrapper<RawRule>,
 }
 
 impl Context {

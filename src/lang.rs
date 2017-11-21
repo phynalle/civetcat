@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use syntax::grammar::Grammar;
+use syntax::grammar::{Grammar, load_grammar_from_source};
 use _generated;
 
 pub fn identify(ext: &str) -> Option<&str> {
@@ -22,7 +22,7 @@ impl LangLoader {
         if let Some(g) = self.grammars.borrow().get(lang) {
             return Rc::clone(g);
         }
-        match _generated::_load_grammar(lang) {
+        match load_grammar_from_source(lang) {
             Ok(g) => {
                 let g = Rc::new(g);
                 self.grammars.borrow_mut().insert(
