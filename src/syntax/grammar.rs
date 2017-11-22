@@ -1,13 +1,7 @@
 use std::io::Result;
-use serde_json;
-use syntax::rule::{self, Compiler, Rule, RuleId, RawRule, CaptureGroup};
+use syntax::rule::{self, Compiler, Rule, RuleId, CaptureGroup};
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
-
-pub fn load_grammar(raw_text: &str) -> Result<Grammar> {
-    let mut c = Compiler::new("source.c");
-    Ok(c.compile())
-}
 
 pub fn load_grammar_from_source(src_name: &str) -> Result<Grammar> {
     let mut c = Compiler::new(src_name);
@@ -165,10 +159,10 @@ impl<'a> Tokenizer<'a> {
         for (i, cap) in captured.into_iter().enumerate() {
             if let Some(pos) = *cap {
                 if let Some(rule) = capture_group.0.get(&i) {
-                    self.state.push(rule.upgrade().unwrap(), None);
                     if self.tokengen.pos < pos.0 {
                         self.tokengen.generate(pos.0, &self.state);
                     }
+                    self.state.push(rule.upgrade().unwrap(), None);
                     self.tokenize_string(text.substr(pos.0, pos.1 - pos.0));
                     self.state.pop();
                 }
