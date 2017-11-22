@@ -11,7 +11,7 @@
       "selectionBackground":95,
       "selectionForeground":181
    },
-   "settings":[
+   "tokenColors":[
       {
          "settings":{
             "background":16,

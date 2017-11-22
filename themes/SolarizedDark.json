@@ -1,0 +1,389 @@
+{
+    "tokenColors": [
+      {
+        "settings": {
+          "foreground": 109,
+          "background": 17
+        }
+      },
+      {
+        "scope": [
+          "meta.embedded",
+          "source.groovy.embedded"
+        ],
+        "settings": {
+          "foreground": 109,
+          "background": 17
+        }
+      },
+      {
+        "scope": "comment",
+        "name": "Comment",
+        "settings": {
+          "foreground": 66,
+          "fontStyle": "italic"
+        }
+      },
+      {
+        "scope": "string",
+        "name": "String",
+        "settings": {
+          "foreground": 36
+        }
+      },
+      {
+        "scope": "string.regexp",
+        "name": "Regexp",
+        "settings": {
+          "foreground": 160
+        }
+      },
+      {
+        "scope": "constant.numeric",
+        "name": "Number",
+        "settings": {
+          "foreground": 168
+        }
+      },
+      {
+        "scope": [
+          "variable.language",
+          "variable.other"
+        ],
+        "name": "Variable",
+        "settings": {
+          "foreground": 32
+        }
+      },
+      {
+        "scope": "keyword",
+        "name": "Keyword",
+        "settings": {
+          "foreground": 100
+        }
+      },
+      {
+        "scope": "storage",
+        "name": "Storage",
+        "settings": {
+          "foreground": 109,
+          "fontStyle": "bold"
+        }
+      },
+      {
+        "scope": [
+          "entity.name.class",
+          "entity.name.type"
+        ],
+        "name": "Class name",
+        "settings": {
+          "foreground": 166,
+          "fontStyle": ""
+        }
+      },
+      {
+        "scope": "entity.name.function",
+        "name": "Function name",
+        "settings": {
+          "foreground": 32
+        }
+      },
+      {
+        "scope": "punctuation.definition.variable",
+        "name": "Variable start",
+        "settings": {
+          "foreground": 100
+        }
+      },
+      {
+        "scope": [
+          "punctuation.section.embedded.begin",
+          "punctuation.section.embedded.end"
+        ],
+        "name": "Embedded code markers",
+        "settings": {
+          "foreground": 160
+        }
+      },
+      {
+        "scope": [
+          "constant.language",
+          "meta.preprocessor"
+        ],
+        "name": "Built-in constant",
+        "settings": {
+          "foreground": 136
+        }
+      },
+      {
+        "scope": [
+          "support.function.construct",
+          "keyword.other.new"
+        ],
+        "name": "Support.construct",
+        "settings": {
+          "foreground": 166
+        }
+      },
+      {
+        "scope": [
+          "constant.character",
+          "constant.other"
+        ],
+        "name": "User-defined constant",
+        "settings": {
+          "foreground": 166
+        }
+      },
+      {
+        "scope": "entity.other.inherited-class",
+        "name": "Inherited class",
+        "settings": {
+          "foreground": 62
+        }
+      },
+      {
+        "scope": "variable.parameter",
+        "name": "Function argument",
+        "settings": {}
+      },
+      {
+        "scope": "entity.name.tag",
+        "name": "Tag name",
+        "settings": {
+          "foreground": 32
+        }
+      },
+      {
+        "scope": "punctuation.definition.tag",
+        "name": "Tag start/end",
+        "settings": {
+          "foreground": 66
+        }
+      },
+      {
+        "scope": "entity.other.attribute-name",
+        "name": "Tag attribute",
+        "settings": {
+          "foreground": 109
+        }
+      },
+      {
+        "scope": "support.function",
+        "name": "Library function",
+        "settings": {
+          "foreground": 32
+        }
+      },
+      {
+        "scope": "punctuation.separator.continuation",
+        "name": "Continuation",
+        "settings": {
+          "foreground": 160
+        }
+      },
+      {
+        "scope": "support.constant",
+        "name": "Library constant",
+        "settings": {}
+      },
+      {
+        "scope": [
+          "support.type",
+          "support.class"
+        ],
+        "name": "Library class/type",
+        "settings": {
+          "foreground": 100
+        }
+      },
+      {
+        "scope": "support.type.exception",
+        "name": "Library Exception",
+        "settings": {
+          "foreground": 166
+        }
+      },
+      {
+        "scope": "support.other.variable",
+        "name": "Library variable",
+        "settings": {}
+      },
+      {
+        "scope": "invalid",
+        "name": "Invalid",
+        "settings": {}
+      },
+      {
+        "scope": [
+          "meta.diff",
+          "meta.diff.header"
+        ],
+        "name": "diff: header",
+        "settings": {
+          "foreground": 194,
+          "fontStyle": "italic",
+          "background": 136
+        }
+      },
+      {
+        "scope": "markup.deleted",
+        "name": "diff: deleted",
+        "settings": {
+          "foreground": 166,
+          "fontStyle": "",
+          "background": 224
+        }
+      },
+      {
+        "scope": "markup.changed",
+        "name": "diff: changed",
+        "settings": {
+          "foreground": 166,
+          "fontStyle": "",
+          "background": 224
+        }
+      },
+      {
+        "scope": "markup.inserted",
+        "name": "diff: inserted",
+        "settings": {
+          "foreground": 30,
+          "background": 224
+        }
+      },
+      {
+        "scope": "markup.quote",
+        "name": "Markup Quote",
+        "settings": {
+          "foreground": 100
+        }
+      },
+      {
+        "scope": "markup.list",
+        "name": "Markup Lists",
+        "settings": {
+          "foreground": 136
+        }
+      },
+      {
+        "scope": [
+          "markup.bold",
+          "markup.italic"
+        ],
+        "name": "Markup Styling",
+        "settings": {
+          "foreground": 168
+        }
+      },
+      {
+        "scope": "markup.inline.raw",
+        "name": "Markup Inline",
+        "settings": {
+          "foreground": 36,
+          "fontStyle": ""
+        }
+      },
+      {
+        "scope": "markup.heading",
+        "name": "Markup Headings",
+        "settings": {
+          "foreground": 32
+        }
+      },
+      {
+        "scope": "markup.heading.setext",
+        "name": "Markup Setext Header",
+        "settings": {
+          "foreground": 32,
+          "fontStyle": ""
+        }
+      }
+    ],
+    "colors": {
+      "list.activeSelectionBackground": 23,
+      "terminal.ansiGreen": 100,
+      "editorGroup.dropBackground": 36,
+      "statusBar.foreground": 109,
+      "editor.selectionHighlightBackground": 23,
+      "statusBarItem.prominentHoverBackground": 23,
+      "input.placeholderForeground": 109,
+      "panel.border": 17,
+      "editorWidget.background": 16,
+      "tab.inactiveBackground": 23,
+      "list.focusBackground": 23,
+      "activityBar.background": 23,
+      "debugExceptionWidget.border": 131,
+      "selection.background": 36,
+      "inputValidation.infoBorder": 59,
+      "editor.wordHighlightStrongBackground": 23,
+      "tab.inactiveForeground": 109,
+      "statusBar.background": 16,
+      "editor.background": 17,
+      "debugExceptionWidget.background": 16,
+      "statusBarItem.prominentBackground": 23,
+      "focusBorder": 36,
+      "editorHoverWidget.background": 23,
+      "terminal.ansiWhite": 224,
+      "editorMarkerNavigationWarning.background": 66,
+      "inputValidation.warningBorder": 137,
+      "input.background": 23,
+      "terminal.ansiCyan": 36,
+      "terminal.ansiBrightBlue": 102,
+      "editorCursor.foreground": 160,
+      "errorForeground": 224,
+      "terminal.ansiBrightCyan": 109,
+      "peekViewEditor.background": 16,
+      "editorGroup.border": 16,
+      "peekViewEditor.matchHighlightBackground": 97,
+      "terminal.ansiBrightWhite": 230,
+      "terminal.ansiBrightMagenta": 62,
+      "terminal.ansiBlue": 32,
+      "pickerGroup.border": 36,
+      "progressBar.background": 31,
+      "badge.background": 31,
+      "peekViewTitle.background": 16,
+      "list.hoverBackground": 23,
+      "terminal.ansiBrightRed": 166,
+      "statusBar.noFolderBackground": 16,
+      "input.foreground": 109,
+      "inputValidation.errorBackground": 52,
+      "debugToolBar.background": 16,
+      "tab.activeForeground": 188,
+      "terminal.ansiBlack": 23,
+      "tab.border": 23,
+      "peekViewResult.background": 16,
+      "list.highlightForeground": 38,
+      "pickerGroup.foreground": 36,
+      "button.background": 36,
+      "terminal.ansiBrightGreen": 60,
+      "peekView.border": 17,
+      "terminal.ansiYellow": 136,
+      "editorWhitespace.foreground": 109,
+      "notification.background": 23,
+      "inputValidation.infoBackground": 17,
+      "terminal.ansiRed": 166,
+      "sideBarTitle.foreground": 109,
+      "statusBar.debuggingBackground": 16,
+      "tab.activeBackground": 17,
+      "editor.selectionBackground": 23,
+      "terminal.ansiBrightYellow": 66,
+      "editor.lineHighlightBackground": 23,
+      "editorGroup.background": 16,
+      "editorMarkerNavigationError.background": 131,
+      "list.dropBackground": 23,
+      "editorGroupHeader.tabsBackground": 23,
+      "titleBar.activeBackground": 17,
+      "editor.wordHighlightBackground": 23,
+      "dropdown.background": 16,
+      "terminal.ansiMagenta": 168,
+      "inputValidation.errorBorder": 125,
+      "list.inactiveSelectionBackground": 23,
+      "inputValidation.warningBackground": 59,
+      "inputOption.activeBorder": 36,
+      "terminal.ansiBrightBlack": 60,
+      "sideBar.background": 16,
+      "dropdown.border": 36
+    },
+    "name": "Solarized (dark)"
+  }

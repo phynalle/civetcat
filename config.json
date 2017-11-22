@@ -10,6 +10,14 @@
         {
             "name": "KimbieDark",
             "path": "themes/Kimbie_dark.json"
+        }, 
+        {
+            "name": "Monokai",
+            "path": "themes/Monokai.json"
+        },
+        {
+            "name": "SolarizedDark",
+            "path": "themes/SolarizedDark.json"
         }
     ]
 }

@@ -12,7 +12,7 @@ macro_rules! skeleton {
     () => (
 "use std::collections::HashMap;
 use std::io::Result;
-use syntax::grammar::{{Grammar, load_grammar}};
+use syntax::grammar::Grammar;
 use colorizer::{{ScopeTree, load_theme}};
 
 pub enum Theme {{
@@ -36,15 +36,17 @@ pub fn retrieve_syntax(lang: &str) -> &'static str {{
     }}
 }}
 
+/*
 pub fn _load_grammar(lang: &str) -> Result<Grammar> {{
     match lang {{
 {}
         _ => panic!(\"undefined language: {{}}\", lang),
     }}
 }}
+*/
 
-pub fn _load_theme(theme: &Theme) -> Result<ScopeTree> {{
-    match *theme {{
+pub fn _load_theme(theme: Theme) -> Result<ScopeTree> {{
+    match theme {{
 {}
     }}
 }}
@@ -77,7 +79,7 @@ fn main() {
         ));
         syn_mat.push_str(&format!("        \"{}\" => {},\n", lang.scope_name, _raw));
         lg.push_str(&format!("        \"{}\" => {}(),\n", lang.scope_name, _fn));
-        func.push_str(&format!("{}\n", gen_load_syntax_func(&lang.name)));
+        // func.push_str(&format!("{}\n", gen_load_syntax_func(&lang.name)));
 
         for e in lang.file_types {
             ext.push_str(&format!(
@@ -95,7 +97,7 @@ raw.push_str(&format!( "const {}: &'static str = \"{}\";\n",
             _raw,
             read_file(&theme.path)
         ));
-        theme_def.push_str(&format!("    {}\n", theme.name));
+        theme_def.push_str(&format!("    {},\n", theme.name));
         lt.push_str(&format!("        Theme::{} => {}(),\n", theme.name, _fn));
         func.push_str(&format!("{}\n", gen_load_theme_func(&theme.name)));
     }
