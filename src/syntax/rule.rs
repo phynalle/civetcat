@@ -1,5 +1,5 @@
 use std::rc::{Rc, Weak};
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use serde_json;
@@ -96,11 +96,6 @@ impl Rule {
         }
     }
 
-    pub fn do_include<F: FnOnce(&IncludeRule)>(&self, func: F) {
-        if let Inner::Include(ref rule) = **self.inner {
-            func(rule)
-        }
-    }
     pub fn do_match<F: FnOnce(&MatchRule)>(&self, func: F) {
         if let Inner::Match(ref rule) = **self.inner {
             func(rule)

@@ -10,14 +10,6 @@ impl<T> Lazy<T> {
         Lazy { val: UnsafeCell::new(None) }
     }
 
-    pub fn with_value(value: T) -> Lazy<T> {
-        Lazy { val: UnsafeCell::new(Some(value)) }
-    }
-
-    pub fn is_intialized(&self) -> bool {
-        unsafe { (*self.val.get()).is_some() }
-    }
-
     pub fn init(&self, new_val: T) {
         let ptr = self.val.get();
 
@@ -31,10 +23,6 @@ impl<T> Lazy<T> {
 
     pub fn get(&self) -> &T {
         unsafe { (*self.val.get()).as_ref().expect("yet initialized") }
-    }
-
-    pub fn get_mut(&self) -> &mut T {
-        unsafe { (*self.val.get()).as_mut().expect("yet initialized") }
     }
 }
 

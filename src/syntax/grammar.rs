@@ -14,10 +14,6 @@ pub struct Grammar {
 }
 
 impl Grammar {
-    pub fn loads<T: AsRef<str>>(scope_name: T) {
-        let scope_name = scope_name.as_ref();
-    }
-
     pub fn new(rules: Vec<Rule>, root_id: RuleId) -> Grammar {
         Grammar { root_id, rules }
     }
@@ -50,13 +46,13 @@ impl<'a> Tokenizer<'a> {
         tokenizer
     }
 
-    pub fn tokenize(&mut self, s: &str) -> Vec<Vec<Token>> {
-        let mut line_tokens = Vec::new();
-        for line in s.lines() {
-            line_tokens.push(self.tokenize_line(line));
-        }
-        line_tokens
-    }
+    // pub fn tokenize(&mut self, s: &str) -> Vec<Vec<Token>> {
+    //     let mut line_tokens = Vec::new();
+    //     for line in s.lines() {
+    //         line_tokens.push(self.tokenize_line(line));
+    //     }
+    //     line_tokens
+    // }
 
     pub fn tokenize_line(&mut self, line: &str) -> Vec<Token> {
         self.tokenize_string(StrPiece::new(line));

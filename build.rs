@@ -16,7 +16,6 @@ macro_rules! skeleton {
     () => (
 "use std::collections::HashMap;
 use std::io::Result;
-use syntax::grammar::Grammar;
 use colorizer::{{ScopeTree, load_theme}};
 
 pub enum Theme {{
@@ -161,16 +160,16 @@ fn syntax_func_name(lang: &str) -> String {
     format!("_load_{}_grammar", lang.to_lowercase())
 }
 
-fn gen_load_syntax_func(lang: &str) -> String {
-    format!(
-        "fn {}() -> Result<Grammar> {{
-    load_grammar({})
-}}
-",
-        &syntax_func_name(lang),
-        &raw_syntax_name(lang)
-    )
-}
+// fn gen_load_syntax_func(lang: &str) -> String {
+//     format!(
+//         "fn {}() -> Result<Grammar> {{
+//     load_grammar({})
+// }}
+// ",
+//         &syntax_func_name(lang),
+//         &raw_syntax_name(lang)
+//     )
+// }
 
 fn raw_theme_name(theme: &str) -> String {
     format!("RAW_{}_THEME", theme.to_uppercase())

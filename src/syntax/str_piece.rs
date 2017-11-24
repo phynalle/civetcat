@@ -25,10 +25,6 @@ impl<'a> StrPiece<'a> {
         self.pos + self.len
     }
 
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
     pub fn substr(&self, pos: usize, len: usize) -> StrPiece<'a> {
         assert!(self.len >= pos);
         StrPiece::with(self.s, self.pos + pos, len)
@@ -37,11 +33,6 @@ impl<'a> StrPiece<'a> {
     pub fn remove_prefix(&mut self, n: usize) {
         assert!(self.len >= n);
         self.pos += n;
-        self.len -= n;
-    }
-
-    pub fn remove_suffix(&mut self, n: usize) {
-        assert!(self.len >= n);
         self.len -= n;
     }
 
