@@ -3,10 +3,14 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 
-use std::io::{Read, Write};
 
-use std::io::Result;
+#[path = "src/syntax/raw_rule.rs"]
+mod raw_rule;
+
+use std::io::{Read, Write, Result};
 use std::fs::File;
+
+use raw_rule::test;
 
 macro_rules! skeleton {
     () => (
@@ -140,6 +144,8 @@ fn load_language(path: &str) -> Result<Language> {
 fn read_file(path: &str) -> String {
     let mut s = String::new();
     let _ = File::open(path).unwrap().read_to_string(&mut s);
+
+    test(&s);
     s.replace("\\", "\\\\")
         .replace("\"", "\\\"")
         .replace(" ", "")

@@ -4,7 +4,8 @@
         "syntaxes/go.json",
         "syntaxes/c++.json",
         "syntaxes/c.json",
-        "syntaxes/python.json"
+        "syntaxes/python.json",
+        "syntaxes/haskell.json"
     ],
     "themes": [
         {

@@ -6,6 +6,7 @@ use serde_json;
 use syntax::grammar::Grammar;
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
+use syntax::raw_rule::RawRule;
 use lazy::Lazy;
 
 use _generated;
@@ -16,7 +17,6 @@ pub struct MatchResult {
     pub rule: RuleId,
     pub caps: regex::MatchResult,
 } 
-
 #[derive(Clone)]
 pub struct Rule {
     inner: Rc<Lazy<Inner>>,
@@ -374,20 +374,4 @@ impl Context {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct RawRule {
-    pub id: Cell<Option<usize>>,
-    pub include: Option<String>,
-    pub name: Option<String>,
-    pub scope_name: Option<String>,
-    #[serde(rename = "match")]
-    pub match_expr: Option<String>,
-    pub captures: Option<HashMap<usize, RawRule>>,
-    pub begin: Option<String>,
-    pub begin_captures: Option<HashMap<usize, RawRule>>,
-    pub end: Option<String>,
-    pub end_captures: Option<HashMap<usize, RawRule>>,
-    pub patterns: Option<Vec<RawRule>>,
-    pub repository: Option<HashMap<String, RawRule>>,
-}
+
