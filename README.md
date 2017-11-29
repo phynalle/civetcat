@@ -4,20 +4,20 @@ civet is a command line tool which has compatibility with cat. civet (will, not 
 ## Usage
 cv [-n] [file.. ]
 
-## Current States
+## Lastest Version
 ###  Supported Langauges
 Rust
 Go
+C/C++
+Python
+Haskell
 
 ### Theme
-Kimbie dark
+Monokai (default)
+Kimbie Dark
+Solarized Dark
 
-# CAUTION
-다음과 같은 이유로 매우 조심하시길 바랍니다.
+# Screenshots
+![screen shot 2017-11-30 at 12 22 06 am](https://user-images.githubusercontent.com/6007810/33382607-85e36b4e-d564-11e7-8f91-80c635eb0a79.png)
 
-1. 소스코드에서 뿜어져 나오는 향기가 심상치 않습니다.
-2. 이 코드는 현재 매우 해롭습니다. 접근은 되도록 자제해 주시기 바랍니다.
-3. 우리가 이 repo를 오랫동안 들여다본다면, repo 또한 우리를 들여다볼 것입니다.
-4. 폐기물관리법이 위반된 끔찍한 폐기물입니다.
-5. 무릇 사람이라면 누구나가 지니고 있는 성질이 있다고 생각합니다. 사람을 사람답게 만들어주는 흔히 인간성이라 말하는 성질이 그것일 것 입니다. 이 코드의 author는 그 성질이 결여되었습니다.
- 
+![screen shot 2017-11-30 at 12 20 38 am](https://user-images.githubusercontent.com/6007810/33382544-61d8c44c-d564-11e7-8edd-58189b3f684b.png)
