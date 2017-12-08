@@ -14,10 +14,12 @@ extern crate atty;
 
 use std::fs::File;
 use std::rc::Rc;
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::iter::Iterator;
 use std::path::Path;
+use std::borrow::Cow;
+
 use atty::Stream;
 
 mod lazy;
@@ -58,7 +60,7 @@ fn run(mut parsed: Parsed) {
     for file_name in &parsed.file_names {
         let mut printer = Printer::new(parsed.options);
         if file_name == "-" {
-            printer.print(std::io::stdin(), |s| s.to_owned());
+            printer.print(std::io::stdin(), |s| Cow::Borrowed(s));
         } else {
             match File::open(file_name.clone()) {
                 Ok(file) => {
@@ -72,13 +74,13 @@ fn run(mut parsed: Parsed) {
                         Some(g) => {
                             printer.print(file, |s| if atty::is(Stream::Stdout) {
                                 let mut lc = LineColorizer::new(theme::load(), Rc::clone(&g));
-                                lc.process_line(&s)
+                                Cow::Owned(lc.process_line(&s))
                             } else {
-                                s.to_owned()
+                                Cow::Borrowed(s)
                             });
                         }
                         None => {
-                            printer.print(file, |s| s.to_owned());
+                            printer.print(file, |s| Cow::Borrowed(s));
                         }
                     }
                 }
@@ -135,14 +137,14 @@ impl Printer {
         Printer { options }
     }
 
-    fn print<R: Read, F: Fn(&str) -> String>(&mut self, r: R, f: F) {
+    fn print<R, F>(&mut self, r: R, f: F) where R: Read, F: for<'a> Fn(&'a str) -> Cow<'a, str> {
         let stdout = std::io::stdout();
         let mut o = stdout.lock();
         let mut line_num = 1;
         let mut reader = BufReader::new(r);
         loop {
             let mut line = String::new();
-            let (text, r) = match reader.read_line(&mut line) {
+            let (text, newline_char) = match reader.read_line(&mut line) {
                 Ok(0) => break,
                 Ok(mut n) => {
                     if line.ends_with('\n') {
@@ -156,11 +158,10 @@ impl Printer {
                 Err(e) => panic!("{}", e),
             };
 
-            let text = f(text);
             if self.options.display_number {
                 let _ = o.write_fmt(format_args!("{:6}\t", line_num));
             }
-            let _ = o.write_fmt(format_args!("{}{}", text, r));
+            let _ = o.write_fmt(format_args!("{}{}", f(text), newline_char));
             line_num += 1;
         }
         let _ = o.flush();
