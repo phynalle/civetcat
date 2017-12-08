@@ -26,11 +26,12 @@ mod theme;
 mod app;
 mod parser;
 mod syntax;
+mod style;
 mod colorizer;
-mod pipeline;
 mod _generated;
 
-use pipeline::Pipeline;
+use colorizer::LineColorizer;
+
 static EXECUTABLE_NAME: &'static str = "cv";
 
 #[derive(Copy, Clone)]
@@ -70,8 +71,8 @@ fn run(mut parsed: Parsed) {
                     match grammar {
                         Some(g) => {
                             printer.print(file, |s| if atty::is(Stream::Stdout) {
-                                let mut pl = Pipeline::new(theme::load(), Rc::clone(&g));
-                                pl.process_line(&s)
+                                let mut lc = LineColorizer::new(theme::load(), Rc::clone(&g));
+                                lc.process_line(&s)
                             } else {
                                 s.to_owned()
                             });

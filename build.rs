@@ -16,7 +16,7 @@ macro_rules! skeleton {
     () => (
 "use std::collections::HashMap;
 use std::io::Result;
-use colorizer::{{ScopeTree, load_theme}};
+use style::{{StyleTree, load_theme}};
 
 pub enum Theme {{
 {}
@@ -48,7 +48,7 @@ pub fn _load_grammar(lang: &str) -> Result<Grammar> {{
 }}
 */
 
-pub fn _load_theme(theme: Theme) -> Result<ScopeTree> {{
+pub fn _load_theme(theme: Theme) -> Result<StyleTree> {{
     match theme {{
 {}
     }}
@@ -96,7 +96,8 @@ fn main() {
     for theme in config.themes {
         let _raw = raw_theme_name(&theme.name);
         let _fn = theme_func_name(&theme.name);
-raw.push_str(&format!( "const {}: &'static str = \"{}\";\n",
+        raw.push_str(&format!(
+            "const {}: &'static str = \"{}\";\n",
             _raw,
             read_file(&theme.path)
         ));
@@ -106,7 +107,16 @@ raw.push_str(&format!( "const {}: &'static str = \"{}\";\n",
     }
 
     let mut f = File::create("src/_generated.rs").unwrap();
-    let _ = f.write_fmt(format_args!(skeleton!(), theme_def, raw, ext, syn_mat, lg, lt, func));
+    let _ = f.write_fmt(format_args!(
+        skeleton!(),
+        theme_def,
+        raw,
+        ext,
+        syn_mat,
+        lg,
+        lt,
+        func
+    ));
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -181,7 +191,7 @@ fn theme_func_name(theme: &str) -> String {
 
 fn gen_load_theme_func(theme: &str) -> String {
     format!(
-        "fn {}() -> Result<ScopeTree> {{
+        "fn {}() -> Result<StyleTree> {{
     load_theme({})
 }}
 ",

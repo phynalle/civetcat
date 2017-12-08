@@ -16,7 +16,7 @@ pub type RuleId = usize;
 pub struct MatchResult {
     pub rule: RuleId,
     pub caps: regex::MatchResult,
-} 
+}
 #[derive(Clone)]
 pub struct Rule {
     inner: Rc<Lazy<Inner>>,
@@ -155,7 +155,7 @@ pub struct CaptureGroup(pub HashMap<usize, WeakRule>);
 
 struct RefWrapper<T> {
     ptr: *const T,
-    _marker: ::std::marker::PhantomData<T>
+    _marker: ::std::marker::PhantomData<T>,
 }
 
 impl<T> Clone for RefWrapper<T> {
@@ -167,7 +167,7 @@ impl<T> Clone for RefWrapper<T> {
     }
 }
 
-impl<T> Copy for RefWrapper<T> { }
+impl<T> Copy for RefWrapper<T> {}
 
 impl<T> Deref for RefWrapper<T> {
     type Target = T;
@@ -208,10 +208,9 @@ impl Compiler {
     }
 
     fn get_source(&mut self, source: &str) -> &RawRule {
-        self.sources.entry(source.to_owned()).or_insert_with(
-            || {
-                serde_json::from_str(_generated::retrieve_syntax(source)).unwrap()
-            })
+        self.sources.entry(source.to_owned()).or_insert_with(|| {
+            serde_json::from_str(_generated::retrieve_syntax(source)).unwrap()
+        })
     }
 
     pub fn compile(&mut self) -> Grammar {
@@ -281,11 +280,7 @@ impl Compiler {
         }
     }
 
-    fn compile_patterns(
-        &mut self,
-        patterns: &Option<Vec<RawRule>>,
-        ctx: Context,
-    ) -> Vec<WeakRule> {
+    fn compile_patterns(&mut self, patterns: &Option<Vec<RawRule>>, ctx: Context) -> Vec<WeakRule> {
         let mut compiled_patterns = Vec::new();
         if let Some(ref patterns) = *patterns {
             for pattern in patterns {
@@ -294,7 +289,7 @@ impl Compiler {
                     Some(ref inc) if inc.starts_with('#') => {
                         self.compile_rule(ctx.search_pattern(&inc[1..]), ctx)
                     }
-                    
+
                     Some(ref inc) if inc == "$base" => {
                         self.rules[ctx.base.id.get().as_ref().unwrap()].clone()
                     }
@@ -307,7 +302,7 @@ impl Compiler {
                             let source = external_sources[0];
                             let pat = external_sources[1];
 
-                            let ctx = Context { 
+                            let ctx = Context {
                                 base: ctx._self, // Rc::clone(&ctx._self),
                                 _self: RefWrapper::new(self.get_source(source)),
                             };
@@ -315,7 +310,7 @@ impl Compiler {
 
                         } else {
                             let source = inc;
-                            let ctx = Context { 
+                            let ctx = Context {
                                 base: ctx._self, // Rc::clone(&ctx._self),
                                 _self: RefWrapper::new(self.get_source(source)),
                             };
@@ -361,12 +356,10 @@ impl Context {
     fn search_pattern(&self, pat: &str) -> &RawRule {
         let repo = self._self.repository.as_ref().expect(
             "broken format: repository not found",
-            );
+        );
         match repo.get(pat) {
             Some(rule) => rule,
             None => panic!("pattern \"{}\" not found in the repository", pat),
         }
     }
 }
-
-
