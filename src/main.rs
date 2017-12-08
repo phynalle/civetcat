@@ -26,7 +26,6 @@ mod lazy;
 mod lang;
 mod theme;
 mod app;
-mod parser;
 mod syntax;
 mod style;
 mod colorizer;
