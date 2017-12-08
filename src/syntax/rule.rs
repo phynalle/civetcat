@@ -155,14 +155,12 @@ pub struct CaptureGroup(pub HashMap<usize, WeakRule>);
 
 struct RefWrapper<T> {
     ptr: *const T,
-    _marker: ::std::marker::PhantomData<T>,
 }
 
 impl<T> Clone for RefWrapper<T> {
     fn clone(&self) -> RefWrapper<T> {
         RefWrapper {
             ptr: self.ptr,
-            _marker: ::std::marker::PhantomData,
         }
     }
 }
@@ -181,7 +179,6 @@ impl<T> RefWrapper<T> {
     fn new(reference: &T) -> RefWrapper<T> {
         RefWrapper {
             ptr: reference as *const T,
-            _marker: ::std::marker::PhantomData,
         }
     }
 
