@@ -137,7 +137,11 @@ impl Printer {
         Printer { options }
     }
 
-    fn print<R, F>(&mut self, r: R, f: F) where R: Read, F: for<'a> Fn(&'a str) -> Cow<'a, str> {
+    fn print<R, F>(&mut self, r: R, f: F)
+    where
+        R: Read,
+        F: for<'a> Fn(&'a str) -> Cow<'a, str>,
+    {
         let stdout = std::io::stdout();
         let mut o = stdout.lock();
         let mut line_num = 1;
