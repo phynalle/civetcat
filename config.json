@@ -6,7 +6,9 @@
         "syntaxes/c.json",
         "syntaxes/python.json",
         "syntaxes/haskell.json",
-        "syntaxes/toml.json"
+        "syntaxes/javascript.json",
+        "syntaxes/toml.json",
+        "syntaxes/json.json"
     ],
     "themes": [
         {
