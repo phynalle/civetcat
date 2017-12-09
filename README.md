@@ -11,6 +11,7 @@ cv [-n] [file.. ]
 * C/C++
 * Python
 * Haskell
+* TOML
 
 ### Theme
 * Monokai (default)
