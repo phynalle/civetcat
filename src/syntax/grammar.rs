@@ -108,7 +108,7 @@ impl Tokenizer {
                     self.tokengen.generate(pos.0, &self.state);
                 }
                 {
-                    let rule = self.state.current().rule.clone();
+                    let rule = self.state.top().rule.clone();
                     rule.do_beginend(|r| {
                         self.process_capture(text, &m.captures, &r.end_captures);
                     });
@@ -129,7 +129,7 @@ impl Tokenizer {
     }
 
     fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
-        let state = self.state.current();
+        let state = self.state.top();
         let pattern_match = state
             .rule
             .match_subpatterns(text)
@@ -192,7 +192,7 @@ impl State {
         }
     }
 
-    fn current(&self) -> &RuleState {
+    fn top(&self) -> &RuleState {
         assert!(!self.st.is_empty());
         self.st.iter().rev().nth(0).unwrap()
     }
