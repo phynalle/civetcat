@@ -11,7 +11,9 @@ cv [-n] [file.. ]
 * C/C++
 * Python
 * Haskell
+* Javascript
 * TOML
+* JSON
 
 ### Theme
 * Monokai (default)
