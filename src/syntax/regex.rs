@@ -1,4 +1,4 @@
-use onig;
+use onig::{self, RegexOptions, Syntax};
 use syntax::str_piece::StrPiece;
 
 pub struct Regex {
@@ -7,9 +7,10 @@ pub struct Regex {
 
 impl Regex {
     pub fn new(pattern: &str) -> Regex {
-        Regex {
-            re: onig::Regex::new(pattern).expect(&format!("cannot compile pattern: {}", pattern)),
-        }
+        let option = RegexOptions::REGEX_OPTION_NONE;
+        let re = onig::Regex::with_options_and_encoding(pattern, option, Syntax::default())
+            .expect(&format!("cannot compile pattern: {}", pattern));
+        Regex { re }
     }
 
     pub fn find<'a>(&self, text: StrPiece<'a>) -> Option<MatchResult> {
