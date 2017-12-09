@@ -71,8 +71,8 @@ fn run(mut parsed: Parsed) {
 
                     match grammar {
                         Some(g) => {
+                            let mut lc = LineColorizer::new(theme::load(), Rc::clone(&g));
                             printer.print(file, |s| if atty::is(Stream::Stdout) {
-                                let mut lc = LineColorizer::new(theme::load(), Rc::clone(&g));
                                 Cow::Owned(lc.process_line(&s))
                             } else {
                                 Cow::Borrowed(s)
@@ -136,10 +136,10 @@ impl Printer {
         Printer { options }
     }
 
-    fn print<R, F>(&mut self, r: R, f: F)
+    fn print<R, F>(&mut self, r: R, mut f: F)
     where
         R: Read,
-        F: for<'a> Fn(&'a str) -> Cow<'a, str>,
+        F: for<'a> FnMut(&'a str) -> Cow<'a, str>,
     {
         let stdout = std::io::stdout();
         let mut o = stdout.lock();

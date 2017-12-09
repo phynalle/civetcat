@@ -4,17 +4,19 @@ use syntax::grammar::{Tokenizer, Grammar};
 
 pub struct LineColorizer {
     scopes: StyleTree,
-    grammar: Rc<Grammar>,
+    tokenizer: Tokenizer,
 }
 
 impl LineColorizer {
     pub fn new(scopes: StyleTree, grammar: Rc<Grammar>) -> LineColorizer {
-        LineColorizer { scopes, grammar }
+        LineColorizer {
+            scopes,
+            tokenizer: Tokenizer::new(grammar),
+        }
     }
 
     pub fn process_line(&mut self, line: &str) -> String {
-        let mut tokenizer = Tokenizer::new(&*self.grammar);
-        let tokens = tokenizer.tokenize_line(line);
+        let tokens = self.tokenizer.tokenize_line(line);
         let mut colored_tokens: Vec<_> = tokens
             .into_iter()
             .map(|t| {

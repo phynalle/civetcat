@@ -1,4 +1,5 @@
 use std::io::Result;
+use std::rc::Rc;
 use syntax::rule::{self, Compiler, Rule, RuleId, CaptureGroup};
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
@@ -29,17 +30,17 @@ enum BestMatchResult {
     None,
 }
 
-pub struct Tokenizer<'a> {
+pub struct Tokenizer {
     state: State,
-    grammar: &'a Grammar,
+    grammar: Rc<Grammar>,
     tokengen: TokenGenerator,
 }
 
-impl<'a> Tokenizer<'a> {
-    pub fn new(grammar: &'a Grammar) -> Tokenizer {
+impl Tokenizer {
+    pub fn new(grammar: Rc<Grammar>) -> Tokenizer {
         let mut tokenizer = Tokenizer {
             state: State::new(),
-            grammar,
+            grammar: Rc::clone(&grammar),
             tokengen: TokenGenerator::new(),
         };
         tokenizer.state.push(grammar.rule(grammar.root_id), None);
@@ -121,6 +122,10 @@ impl<'a> Tokenizer<'a> {
                 None
             }
         }
+    }
+
+    fn done(&self) {
+        assert!(self.state.depth() == 1);
     }
 
     fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
