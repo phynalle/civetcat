@@ -157,7 +157,6 @@ fn read_file(path: &str) -> String {
     test(&s);
     s.replace("\\", "\\\\")
         .replace("\"", "\\\"")
-        .replace(" ", "")
         .replace("\t", "")
         .replace("\n", "")
 }

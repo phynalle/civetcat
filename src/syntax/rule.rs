@@ -17,6 +17,7 @@ pub struct MatchResult {
     pub rule: RuleId,
     pub caps: regex::MatchResult,
 }
+
 #[derive(Clone)]
 pub struct Rule {
     inner: Rc<Lazy<Inner>>,
@@ -210,11 +211,8 @@ impl Compiler {
         let src_name = self.src_name.clone();
         let root = {
             let raw = RefWrapper::new(self.get_source(&src_name));
-            let ctx = Context {
-                _self: raw,
-                base: raw,
-            };
-            self.compile_rule(&*raw, ctx)
+            let ctx = Context::new(raw, raw);
+            self.compile_rule(&*raw, &ctx)
         };
 
         let mut rules = Vec::new();
@@ -225,7 +223,7 @@ impl Compiler {
         Grammar::new(rules, root.id())
     }
 
-    fn create_rule(&mut self, rule_id: RuleId, rule: &RawRule, ctx: Context) -> Inner {
+    fn create_rule(&mut self, rule_id: RuleId, rule: &RawRule, ctx: &Context) -> Inner {
         if rule.match_expr.is_some() {
             Inner::Match(MatchRule {
                 id: rule_id,
@@ -239,10 +237,19 @@ impl Compiler {
             } else {
                 rule.name.clone()
             };
+
+            let patterns = if rule.repository.is_some() {
+                let mut ctx = ctx.clone();
+                ctx.st.push(RefWrapper::new(rule));
+                self.compile_patterns(&rule.patterns, &ctx)
+            } else {
+                self.compile_patterns(&rule.patterns, ctx)
+            };
+
             Inner::Include(IncludeRule {
                 id: rule_id,
                 name: name,
-                patterns: RefCell::new(self.compile_patterns(&rule.patterns, ctx)),
+                patterns: RefCell::new(patterns),
             })
         } else {
             Inner::BeginEnd(BeginEndRule {
@@ -254,10 +261,8 @@ impl Compiler {
                 end_captures: self.compile_captures(&rule.end_captures, ctx),
                 patterns: self.compile_patterns(&rule.patterns, ctx),
             })
-        }
-    }
-
-    fn compile_rule(&mut self, raw: &RawRule, ctx: Context) -> Rule {
+        } } 
+    fn compile_rule(&mut self, raw: &RawRule, ctx: &Context) -> Rule {
         match raw.id.get() {
             Some(rule_id) => self.rules[&rule_id].clone(),
             None => {
@@ -269,10 +274,9 @@ impl Compiler {
                 rule.assign(self.create_rule(rule_id, raw, ctx));
                 rule
             }
-        }
-    }
+        } }
 
-    fn compile_patterns(&mut self, patterns: &Option<Vec<RawRule>>, ctx: Context) -> Vec<WeakRule> {
+    fn compile_patterns(&mut self, patterns: &Option<Vec<RawRule>>, ctx: &Context) -> Vec<WeakRule> {
         let mut compiled_patterns = Vec::new();
         if let Some(ref patterns) = *patterns {
             for pattern in patterns {
@@ -294,19 +298,12 @@ impl Compiler {
                             let source = external_sources[0];
                             let pat = external_sources[1];
 
-                            let ctx = Context {
-                                base: ctx._self, // Rc::clone(&ctx._self),
-                                _self: RefWrapper::new(self.get_source(source)),
-                            };
-                            self.compile_rule(ctx.search_pattern(pat), ctx)
+                            let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(source)));
+                            self.compile_rule(ctx.search_pattern(pat), &ctx)
 
                         } else {
-                            let source = inc;
-                            let ctx = Context {
-                                base: ctx._self, // Rc::clone(&ctx._self),
-                                _self: RefWrapper::new(self.get_source(source)),
-                            };
-                            self.compile_rule(&*ctx._self, ctx)
+                            let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(inc)));
+                            self.compile_rule(&*ctx._self, &ctx)
                         }
                     }
                 };
@@ -316,7 +313,7 @@ impl Compiler {
         compiled_patterns
     }
 
-    fn compile_captures(&mut self, captures: &Option<RawCapture>, ctx: Context) -> CaptureGroup {
+    fn compile_captures(&mut self, captures: &Option<RawCapture>, ctx: &Context) -> CaptureGroup {
         let mut h = HashMap::new();
         if let Some(ref captures) = *captures {
             match *captures {
@@ -343,20 +340,32 @@ impl Compiler {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Context {
     _self: RefWrapper<RawRule>,
     base: RefWrapper<RawRule>,
+    st: Vec<RefWrapper<RawRule>>,
 }
 
 impl Context {
-    fn search_pattern(&self, pat: &str) -> &RawRule {
-        let repo = self._self.repository.as_ref().expect(
-            "broken format: repository not found",
-        );
-        match repo.get(pat) {
-            Some(rule) => rule,
-            None => panic!("pattern \"{}\" not found in the repository", pat),
+    fn new(base: RefWrapper<RawRule>, _self: RefWrapper<RawRule>) -> Context {
+        Context {
+            base, _self,
+            st: vec![_self],
         }
     }
+
+    fn search_pattern(&self, pat: &str) -> &RawRule {
+        for rule in &self.st {
+            let repo = rule.repository.as_ref().expect(
+                "broken format: repository not found",
+            );
+
+            if let Some(found) = repo.get(pat) {
+                return found;
+            }
+        }
+        panic!("pattern \"{}\" not found in the repository", pat);
+    }
 }
+
