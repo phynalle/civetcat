@@ -23,6 +23,7 @@ impl Regex {
     }
 }
 
+#[derive(Debug)]
 pub struct MatchResult {
     pub captures: Vec<Option<(usize, usize)>>,
 }

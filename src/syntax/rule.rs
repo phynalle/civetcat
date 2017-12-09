@@ -6,7 +6,7 @@ use serde_json;
 use syntax::grammar::Grammar;
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
-use syntax::raw_rule::RawRule;
+use syntax::raw_rule::{RawRule, RawCapture};
 use lazy::Lazy;
 
 use _generated;
@@ -159,9 +159,7 @@ struct RefWrapper<T> {
 
 impl<T> Clone for RefWrapper<T> {
     fn clone(&self) -> RefWrapper<T> {
-        RefWrapper {
-            ptr: self.ptr,
-        }
+        RefWrapper { ptr: self.ptr }
     }
 }
 
@@ -177,9 +175,7 @@ impl<T> Deref for RefWrapper<T> {
 
 impl<T> RefWrapper<T> {
     fn new(reference: &T) -> RefWrapper<T> {
-        RefWrapper {
-            ptr: reference as *const T,
-        }
+        RefWrapper { ptr: reference as *const T }
     }
 
     unsafe fn get(&self) -> &T {
@@ -243,7 +239,6 @@ impl Compiler {
             } else {
                 rule.name.clone()
             };
-
             Inner::Include(IncludeRule {
                 id: rule_id,
                 name: name,
@@ -313,7 +308,7 @@ impl Compiler {
                             };
                             self.compile_rule(&*ctx._self, ctx)
                         }
-                    } 
+                    }
                 };
                 compiled_patterns.push(rule.downgrade());
             }
@@ -321,16 +316,21 @@ impl Compiler {
         compiled_patterns
     }
 
-    fn compile_captures(
-        &mut self,
-        captures: &Option<HashMap<usize, RawRule>>,
-        ctx: Context,
-    ) -> CaptureGroup {
+    fn compile_captures(&mut self, captures: &Option<RawCapture>, ctx: Context) -> CaptureGroup {
         let mut h = HashMap::new();
         if let Some(ref captures) = *captures {
-            for (k, v) in captures {
-                let r = self.compile_rule(v, ctx).downgrade();
-                h.insert(*k, r);
+            match *captures {
+                RawCapture::Map(ref map) => {
+                    for (k, v) in map {
+                        let r = self.compile_rule(v, ctx).downgrade();
+                        let n = k.parse::<usize>().unwrap();
+                        h.insert(n, r);
+                    }
+                }
+                RawCapture::List(ref list) => {
+                    let r = self.compile_rule(&list[0], ctx).downgrade();
+                    h.insert(0, r);
+                }
             }
         }
         CaptureGroup(h)

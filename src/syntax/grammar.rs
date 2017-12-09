@@ -125,11 +125,12 @@ impl<'a> Tokenizer<'a> {
 
     fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
         let state = self.state.current();
-        let pattern_match = state.rule.match_subpatterns(text).into_iter().min_by_key(
-            |x| {
-                x.caps.start()
-            },
-        );
+        let pattern_match = state
+            .rule
+            .match_subpatterns(text)
+            .into_iter()
+            .filter(|x| x.caps.start() != x.caps.end())
+            .min_by_key(|x| x.caps.start());
         let end_match = state.end_expr.as_ref().and_then(|expr| expr.find(text));
 
         match (pattern_match, end_match) {
@@ -137,7 +138,7 @@ impl<'a> Tokenizer<'a> {
             (None, Some(e)) => BestMatchResult::End(e),
             (Some(p), None) => BestMatchResult::Pattern(p),
             (Some(p), Some(e)) => {
-                if e.start() < p.caps.start() {
+                if e.start() <= p.caps.start() {
                     BestMatchResult::End(e)
                 } else {
                     BestMatchResult::Pattern(p)
@@ -203,6 +204,11 @@ impl State {
         assert!(!self.st.is_empty());
         self.st.pop();
         self.scopes.pop();
+    }
+
+    #[allow(dead_code)]
+    fn depth(&self) -> usize {
+        self.st.len()
     }
 }
 
