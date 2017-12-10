@@ -60,12 +60,7 @@ impl Tokenizer {
         let while_not_matched = {
             let top = self.state.top();
             match top.rule.display() {
-                Type::BeginWhile => {
-                    top.expr
-                        .as_ref()
-                        .and_then(|expr| expr.find(line_str))
-                        .is_none()
-                }
+                Type::BeginWhile => top.match_expr(line_str).is_none(),
                 _ => false,
             }
         };
@@ -154,7 +149,7 @@ impl Tokenizer {
             .filter(|x| x.caps.start() != x.caps.end())
             .min_by_key(|x| x.caps.start());
         let end_match = match state.rule.display() {
-            Type::BeginEnd => state.expr.as_ref().and_then(|expr| expr.find(text)),
+            Type::BeginEnd => state.match_expr(text),
             _ => None,
         };
 
@@ -181,11 +176,12 @@ impl Tokenizer {
         for (i, cap) in captured.into_iter().enumerate() {
             if let Some(pos) = *cap {
                 if let Some(rule) = capture_group.0.get(&i) {
-                    if self.tokengen.pos < pos.0 {
-                        self.tokengen.generate(pos.0, &self.state);
+                    let captured_text = text.substr(pos.0, pos.1 - pos.0);
+                    if self.tokengen.pos < captured_text.start() {
+                        self.tokengen.generate(captured_text.start(), &self.state);
                     }
                     self.state.push(rule.upgrade().unwrap(), None);
-                    self.tokenize_string(text.substr(pos.0, pos.1 - pos.0));
+                    self.tokenize_string(captured_text);
                     self.state.pop();
                 }
             }
@@ -197,6 +193,12 @@ impl Tokenizer {
 struct RuleState {
     rule: Rule,
     expr: Option<Regex>,
+}
+
+impl RuleState {
+    fn match_expr<'a>(&self, text: StrPiece<'a>) -> Option<regex::MatchResult> {
+        self.expr.as_ref().and_then(|expr| expr.find(text))
+    }
 }
 
 struct State {
