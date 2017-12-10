@@ -88,49 +88,45 @@ impl Tokenizer {
         match self.best_match(text) {
             BestMatchResult::Pattern(m) => {
                 let pos = (m.caps.start() + text.start(), m.caps.end() + text.start());
-                if self.tokengen.pos < pos.0 {
-                    self.tokengen.generate(pos.0, &self.state);
-                }
+                self.generate_token(pos.0);
 
                 // TOOD: remove repetitive codes below
                 let rule = self.grammar.rule(m.rule);
                 rule.do_match(|r| {
                     self.state.push(rule.clone(), None);
                     self.process_capture(text, &m.caps.captures, &r.captures);
-                    self.tokengen.generate(pos.1, &self.state);
+                    self.generate_token(pos.1);
                     self.state.pop();
                 });
                 rule.do_beginend(|r| {
                     let s = replace_backref(r.end_expr.clone(), text, &m.caps);
                     self.state.push(rule.clone(), Some(s));
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
-                    self.tokengen.generate(pos.1, &self.state);
+                    self.generate_token(pos.1);
                 });
                 rule.do_beginwhile(|r| {
                     let s = replace_backref(r.while_expr.clone(), text, &m.caps);
                     self.state.push(rule.clone(), Some(s));
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
-                    self.tokengen.generate(pos.1, &self.state);
+                    self.generate_token(pos.1);
                 });
                 Some(m.caps.end())
             }
             BestMatchResult::End(m) => {
                 let pos = (m.start() + text.start(), m.end() + text.start());
-                if self.tokengen.pos < pos.0 {
-                    self.tokengen.generate(pos.0, &self.state);
-                }
+                self.generate_token(pos.0);
                 {
                     let rule = self.state.top().rule.clone();
                     rule.do_beginend(|r| {
                         self.process_capture(text, &m.captures, &r.end_captures);
                     });
                 }
-                self.tokengen.generate(pos.1, &self.state);
+                self.generate_token(pos.1);
                 self.state.pop();
                 Some(m.end())
             }
             BestMatchResult::None => {
-                self.tokengen.generate(text.end(), &self.state);
+                self.generate_token(text.end());
                 None
             }
         }
@@ -177,16 +173,17 @@ impl Tokenizer {
             if let Some(pos) = *cap {
                 if let Some(rule) = capture_group.0.get(&i) {
                     let captured_text = text.substr(pos.0, pos.1 - pos.0);
-                    if self.tokengen.pos < captured_text.start() {
-                        self.tokengen.generate(captured_text.start(), &self.state);
-                    }
+                    self.generate_token(captured_text.start());
                     self.state.push(rule.upgrade().unwrap(), None);
                     self.tokenize_string(captured_text);
                     self.state.pop();
                 }
             }
         }
+    }
 
+    fn generate_token(&mut self, pos: usize) {
+        self.tokengen.generate(pos, &self.state)
     }
 }
 
