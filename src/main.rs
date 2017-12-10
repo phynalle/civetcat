@@ -13,7 +13,6 @@ extern crate clap;
 extern crate atty;
 
 use std::fs::File;
-use std::rc::Rc;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::iter::Iterator;
@@ -61,32 +60,34 @@ fn run(mut parsed: Parsed) {
         if file_name == "-" {
             printer.print(std::io::stdin(), |s| Cow::Borrowed(s));
         } else {
-            match File::open(file_name.clone()) {
-                Ok(file) => {
-                    let path = Path::new(file_name);
-                    let grammar = path.extension()
-                        .and_then(|ext| ext.to_str())
-                        .and_then(|ext| lang::identify(ext))
-                        .map(|ln| ll.load_grammar(ln));
+            print_file(file_name.clone(), &mut printer, &ll);
+        }
+    }
+}
 
-                    match grammar {
-                        Some(g) => {
-                            let mut lc = LineColorizer::new(theme::load(), Rc::clone(&g));
-                            printer.print(file, |s| if atty::is(Stream::Stdout) {
-                                Cow::Owned(lc.process_line(&s))
-                            } else {
-                                Cow::Borrowed(s)
-                            });
-                        }
-                        None => {
-                            printer.print(file, |s| Cow::Borrowed(s));
-                        }
-                    }
+fn print_file<T: AsRef<str>>(file_name: T, printer: &mut Printer, ll: &lang::LangLoader) {
+    match File::open(file_name.as_ref()) {
+        Ok(file) => {
+            let path = Path::new(file_name.as_ref());
+            let grammar = if atty::is(Stream::Stdout) {
+                path.extension()
+                    .and_then(|ext| ext.to_str())
+                    .and_then(|ext| lang::identify(ext))
+                    .map(|ln| ll.load_grammar(ln))
+            } else {
+                None
+            };
+
+            match grammar {
+                Some(g) => {
+                    let mut lc = LineColorizer::new(theme::load(), g);
+                    printer.print(file, |s| Cow::Owned(lc.process_line(&s)));
                 }
-                Err(e) => {
-                    print_error(&format!("{}: {}", file_name, e));
-                }
+                None => printer.print(file, |s| Cow::Borrowed(s)),
             }
+        }
+        Err(e) => {
+            print_error(&format!("{}: {}", file_name.as_ref(), e));
         }
     }
 }
