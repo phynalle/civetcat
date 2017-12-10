@@ -208,13 +208,11 @@ pub struct BeginWhileRule {
 
 pub struct CaptureGroup(pub HashMap<usize, WeakRule>);
 
-struct RefWrapper<T> {
-    ptr: *const T,
-}
+struct RefWrapper<T>(*const T);
 
 impl<T> Clone for RefWrapper<T> {
     fn clone(&self) -> RefWrapper<T> {
-        RefWrapper { ptr: self.ptr }
+        RefWrapper(self.0)
     }
 }
 
@@ -224,17 +222,13 @@ impl<T> Deref for RefWrapper<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { self.get() }
+        unsafe { &*self.0 }
     }
 }
 
 impl<T> RefWrapper<T> {
     fn new(reference: &T) -> RefWrapper<T> {
-        RefWrapper { ptr: reference as *const T }
-    }
-
-    unsafe fn get(&self) -> &T {
-        &*self.ptr
+        RefWrapper(reference as *const T)
     }
 }
 
@@ -365,11 +359,13 @@ impl Compiler {
                         let external_sources: Vec<_> = inc.splitn(2, '#').collect();
                         let source = external_sources[0];
                         let pat = external_sources[1];
-                        let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(source)));
+                        let new_root = RefWrapper::new(self.get_source(source));
+                        let ctx = Context::new(ctx._self, new_root);
                         self.compile_rule(ctx.search_pattern(pat), &ctx)
                     }
                     Some(ref inc) => {
-                        let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(inc)));
+                        let new_root = RefWrapper::new(self.get_source(inc));
+                        let ctx = Context::new(ctx._self, new_root);
                         self.compile_rule(&*ctx._self, &ctx)
                     }
                 };
@@ -416,8 +412,8 @@ struct Context {
 impl Context {
     fn new(base: RefWrapper<RawRule>, _self: RefWrapper<RawRule>) -> Context {
         Context {
-            base,
-            _self,
+            base: base,
+            _self: _self,
             st: vec![_self],
         }
     }

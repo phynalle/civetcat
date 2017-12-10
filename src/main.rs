@@ -80,8 +80,8 @@ fn print_file<T: AsRef<str>>(file_name: T, printer: &mut Printer, ll: &lang::Lan
 
             match grammar {
                 Some(g) => {
-                    let mut lc = LineColorizer::new(theme::load(), g);
-                    printer.print(file, |s| Cow::Owned(lc.process_line(&s)));
+                    let mut lc = LineColorizer::new(theme::load(), &g);
+                    printer.print(file, |s| Cow::Owned(lc.process_line(s)));
                 }
                 None => printer.print(file, |s| Cow::Borrowed(s)),
             }

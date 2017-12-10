@@ -1,6 +1,6 @@
 use clap::{App, Arg};
 
-const ABOUT: &'static str = "civet colorizes your inputs";
+const ABOUT: &str = "civet colorizes your inputs";
 
 pub fn initialize() -> App<'static, 'static> {
     App::new("civet")

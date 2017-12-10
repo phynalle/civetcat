@@ -18,6 +18,7 @@ macro_rules! skeleton {
 use std::io::Result;
 use style::{{StyleTree, load_theme}};
 
+#[derive(Clone, Copy)]
 pub enum Theme {{
 {}
 }}
@@ -76,7 +77,7 @@ fn main() {
         let _fn = syntax_func_name(&lang.name);
 
         raw.push_str(&format!(
-            "const {}: &'static str = \"{}\";\n",
+            "const {}: &str = \"{}\";\n",
             _raw,
             read_file(&path)
         ));
@@ -97,7 +98,7 @@ fn main() {
         let _raw = raw_theme_name(&theme.name);
         let _fn = theme_func_name(&theme.name);
         raw.push_str(&format!(
-            "const {}: &'static str = \"{}\";\n",
+            "const {}: &str = \"{}\";\n",
             _raw,
             read_file(&theme.path)
         ));

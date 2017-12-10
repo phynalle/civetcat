@@ -8,7 +8,7 @@ pub struct LineColorizer {
 }
 
 impl LineColorizer {
-    pub fn new(scopes: StyleTree, grammar: Rc<Grammar>) -> LineColorizer {
+    pub fn new(scopes: StyleTree, grammar: &Rc<Grammar>) -> LineColorizer {
         LineColorizer {
             scopes,
             tokenizer: Tokenizer::new(grammar),

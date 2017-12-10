@@ -37,13 +37,13 @@ pub struct Tokenizer {
 }
 
 impl Tokenizer {
-    pub fn new(grammar: Rc<Grammar>) -> Tokenizer {
+    pub fn new(grammar: &Rc<Grammar>) -> Tokenizer {
         let mut tokenizer = Tokenizer {
             state: State::new(),
-            grammar: Rc::clone(&grammar),
+            grammar: Rc::clone(grammar),
             tokengen: TokenGenerator::new(),
         };
-        tokenizer.state.push(grammar.rule(grammar.root_id), None);
+        tokenizer.state.push(&grammar.rule(grammar.root_id), None);
         tokenizer
     }
 
@@ -76,11 +76,8 @@ impl Tokenizer {
     }
 
     fn tokenize_string<'b>(&mut self, mut text: StrPiece<'b>) {
-        loop {
-            match self.tokenize_next(text) {
-                Some(pos) => text.remove_prefix(pos),
-                None => break,
-            }
+        while let Some(pos) = self.tokenize_next(text) {
+            text.remove_prefix(pos);
         }
     }
 
@@ -93,20 +90,20 @@ impl Tokenizer {
                 // TOOD: remove repetitive codes below
                 let rule = self.grammar.rule(m.rule);
                 rule.do_match(|r| {
-                    self.state.push(rule.clone(), None);
+                    self.state.push(&rule, None);
                     self.process_capture(text, &m.caps.captures, &r.captures);
                     self.generate_token(pos.1);
                     self.state.pop();
                 });
                 rule.do_beginend(|r| {
                     let s = replace_backref(r.end_expr.clone(), text, &m.caps);
-                    self.state.push(rule.clone(), Some(s));
+                    self.state.push(&rule, Some(s));
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.generate_token(pos.1);
                 });
                 rule.do_beginwhile(|r| {
                     let s = replace_backref(r.while_expr.clone(), text, &m.caps);
-                    self.state.push(rule.clone(), Some(s));
+                    self.state.push(&rule, Some(s));
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.generate_token(pos.1);
                 });
@@ -174,7 +171,7 @@ impl Tokenizer {
                 if let Some(rule) = capture_group.0.get(&i) {
                     let captured_text = text.substr(pos.0, pos.1 - pos.0);
                     self.generate_token(captured_text.start());
-                    self.state.push(rule.upgrade().unwrap(), None);
+                    self.state.push(rule.upgrade().as_ref().unwrap(), None);
                     self.tokenize_string(captured_text);
                     self.state.pop();
                 }
@@ -216,7 +213,7 @@ impl State {
         self.st.iter().rev().nth(0).unwrap()
     }
 
-    fn push(&mut self, rule: Rule, expr: Option<String>) {
+    fn push(&mut self, rule: &Rule, expr: Option<String>) {
         self.st.push(RuleState {
             rule: rule.clone(),
             expr: expr.map(|s| Regex::new(&s)),
