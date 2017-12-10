@@ -23,6 +23,8 @@ pub struct RawRule {
     pub begin_captures: Option<RawCapture>,
     pub end: Option<String>,
     pub end_captures: Option<RawCapture>,
+    #[serde(rename = "while")]
+    pub while_expr: Option<String>,
     pub patterns: Option<Vec<RawRule>>,
     pub repository: Option<HashMap<String, RawRule>>,
 }

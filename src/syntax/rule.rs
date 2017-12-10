@@ -18,6 +18,13 @@ pub struct MatchResult {
     pub caps: regex::MatchResult,
 }
 
+pub enum Type {
+    Include,
+    Match,
+    BeginEnd,
+    BeginWhile,
+}
+
 #[derive(Clone)]
 pub struct Rule {
     inner: Rc<Lazy<Inner>>,
@@ -37,6 +44,7 @@ impl Rule {
             Inner::Include(ref r) => r.id,
             Inner::Match(ref r) => r.id,
             Inner::BeginEnd(ref r) => r.id,
+            Inner::BeginWhile(ref r) => r.id,
         }
     }
 
@@ -45,6 +53,16 @@ impl Rule {
             Inner::Include(ref r) => r.name.clone(),
             Inner::Match(ref r) => r.name.clone(),
             Inner::BeginEnd(ref r) => r.name.clone(),
+            Inner::BeginWhile(ref r) => r.name.clone(),
+        }
+    }
+
+    pub fn display(&self) -> Type {
+        match **self.inner {
+            Inner::Include(_) => Type::Include,
+            Inner::Match(_) => Type::Match,
+            Inner::BeginEnd(_) => Type::BeginEnd,
+            Inner::BeginWhile(_) => Type::BeginWhile,
         }
     }
 
@@ -57,7 +75,8 @@ impl Rule {
         match **self.inner {
             Inner::Include(ref r) => {
                 let patterns = r.patterns.borrow();
-                for pattern in (*patterns).iter().map(|rule| rule.upgrade().unwrap()) {
+                for pattern in &(*patterns) {
+                    let pattern = pattern.upgrade().unwrap();
                     match_results.extend(pattern.match_patterns(text));
                 }
             }
@@ -79,6 +98,15 @@ impl Rule {
                     });
                 }
             }
+            Inner::BeginWhile(ref r) => {
+                let m = r.begin_expr.find(text);
+                if m.is_some() {
+                    match_results.push(MatchResult {
+                        rule: r.id,
+                        caps: m.unwrap(),
+                    });
+                }
+            }
         }
         match_results
     }
@@ -89,7 +117,16 @@ impl Rule {
             Inner::Match(_) => Vec::new(),
             Inner::BeginEnd(ref r) => {
                 let mut match_results = Vec::new();
-                for pattern in r.patterns.iter().map(|x| x.upgrade().unwrap()) {
+                for pattern in &r.patterns {
+                    let pattern = pattern.upgrade().unwrap();
+                    match_results.extend(pattern.match_patterns(text));
+                }
+                match_results
+            }
+            Inner::BeginWhile(ref r) => {
+                let mut match_results = Vec::new();
+                for pattern in &r.patterns {
+                    let pattern = pattern.upgrade().unwrap();
                     match_results.extend(pattern.match_patterns(text));
                 }
                 match_results
@@ -102,8 +139,15 @@ impl Rule {
             func(rule)
         }
     }
+
     pub fn do_beginend<F: FnOnce(&BeginEndRule)>(&self, func: F) {
         if let Inner::BeginEnd(ref rule) = **self.inner {
+            func(rule)
+        }
+    }
+
+    pub fn do_beginwhile<F: FnOnce(&BeginWhileRule)>(&self, func: F) {
+        if let Inner::BeginWhile(ref rule) = **self.inner {
             func(rule)
         }
     }
@@ -124,7 +168,7 @@ pub enum Inner {
     Include(IncludeRule),
     Match(MatchRule),
     BeginEnd(BeginEndRule),
-    // BeginWhile,
+    BeginWhile(BeginWhileRule),
 }
 
 pub struct IncludeRule {
@@ -149,6 +193,16 @@ pub struct BeginEndRule {
     pub begin_captures: CaptureGroup,
     pub end_captures: CaptureGroup,
 
+    pub patterns: Vec<WeakRule>,
+}
+
+pub struct BeginWhileRule {
+    pub id: RuleId,
+    pub name: Option<String>,
+
+    pub begin_expr: Regex,
+    pub while_expr: String,
+    pub begin_captures: CaptureGroup,
     pub patterns: Vec<WeakRule>,
 }
 
@@ -251,6 +305,15 @@ impl Compiler {
                 name: name,
                 patterns: RefCell::new(patterns),
             })
+        } else if rule.while_expr.is_some() {
+            Inner::BeginWhile(BeginWhileRule {
+                id: rule_id,
+                name: rule.name.clone(),
+                begin_expr: Regex::new(rule.begin.as_ref().unwrap()),
+                while_expr: rule.while_expr.clone().unwrap(),
+                begin_captures: self.compile_captures(&rule.begin_captures, ctx),
+                patterns: self.compile_patterns(&rule.patterns, ctx),
+            })
         } else {
             Inner::BeginEnd(BeginEndRule {
                 id: rule_id,
@@ -261,7 +324,8 @@ impl Compiler {
                 end_captures: self.compile_captures(&rule.end_captures, ctx),
                 patterns: self.compile_patterns(&rule.patterns, ctx),
             })
-        } } 
+        }
+    }
     fn compile_rule(&mut self, raw: &RawRule, ctx: &Context) -> Rule {
         match raw.id.get() {
             Some(rule_id) => self.rules[&rule_id].clone(),
@@ -274,9 +338,14 @@ impl Compiler {
                 rule.assign(self.create_rule(rule_id, raw, ctx));
                 rule
             }
-        } }
+        }
+    }
 
-    fn compile_patterns(&mut self, patterns: &Option<Vec<RawRule>>, ctx: &Context) -> Vec<WeakRule> {
+    fn compile_patterns(
+        &mut self,
+        patterns: &Option<Vec<RawRule>>,
+        ctx: &Context,
+    ) -> Vec<WeakRule> {
         let mut compiled_patterns = Vec::new();
         if let Some(ref patterns) = *patterns {
             for pattern in patterns {
@@ -292,19 +361,16 @@ impl Compiler {
                     Some(ref inc) if inc == "$self" => {
                         self.rules[ctx._self.id.get().as_ref().unwrap()].clone()
                     }
+                    Some(ref inc) if inc.contains('#') => {
+                        let external_sources: Vec<_> = inc.splitn(2, '#').collect();
+                        let source = external_sources[0];
+                        let pat = external_sources[1];
+                        let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(source)));
+                        self.compile_rule(ctx.search_pattern(pat), &ctx)
+                    }
                     Some(ref inc) => {
-                        if inc.contains('#') {
-                            let external_sources: Vec<_> = inc.splitn(2, '#').collect();
-                            let source = external_sources[0];
-                            let pat = external_sources[1];
-
-                            let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(source)));
-                            self.compile_rule(ctx.search_pattern(pat), &ctx)
-
-                        } else {
-                            let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(inc)));
-                            self.compile_rule(&*ctx._self, &ctx)
-                        }
+                        let ctx = Context::new(ctx._self, RefWrapper::new(self.get_source(inc)));
+                        self.compile_rule(&*ctx._self, &ctx)
                     }
                 };
                 compiled_patterns.push(rule.downgrade());
@@ -350,7 +416,8 @@ struct Context {
 impl Context {
     fn new(base: RefWrapper<RawRule>, _self: RefWrapper<RawRule>) -> Context {
         Context {
-            base, _self,
+            base,
+            _self,
             st: vec![_self],
         }
     }
@@ -368,4 +435,3 @@ impl Context {
         panic!("pattern \"{}\" not found in the repository", pat);
     }
 }
-

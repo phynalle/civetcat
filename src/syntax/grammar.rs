@@ -1,6 +1,6 @@
 use std::io::Result;
 use std::rc::Rc;
-use syntax::rule::{self, Compiler, Rule, RuleId, CaptureGroup};
+use syntax::rule::{self, CaptureGroup, Compiler, Rule, RuleId, Type};
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
 
@@ -56,7 +56,24 @@ impl Tokenizer {
     // }
 
     pub fn tokenize_line(&mut self, line: &str) -> Vec<Token> {
-        self.tokenize_string(StrPiece::new(line));
+        let line_str = StrPiece::new(line);
+        let while_not_matched = {
+            let top = self.state.top();
+            match top.rule.display() {
+                Type::BeginWhile => {
+                    top.expr
+                        .as_ref()
+                        .and_then(|expr| expr.find(line_str))
+                        .is_none()
+                }
+                _ => false,
+            }
+        };
+        if while_not_matched {
+            self.state.pop();
+        }
+
+        self.tokenize_string(line_str);
 
         let tokens: Vec<Token> = self.tokengen.tokens.drain(..).collect();
         self.tokengen = TokenGenerator::new();
@@ -80,6 +97,7 @@ impl Tokenizer {
                     self.tokengen.generate(pos.0, &self.state);
                 }
 
+                // TOOD: remove repetitive codes below
                 let rule = self.grammar.rule(m.rule);
                 rule.do_match(|r| {
                     self.state.push(rule.clone(), None);
@@ -88,14 +106,13 @@ impl Tokenizer {
                     self.state.pop();
                 });
                 rule.do_beginend(|r| {
-                    let mut s: String = r.end_expr.clone();
-                    for (i, cap) in m.caps.captures.iter().enumerate().skip(1) {
-                        if let Some(ref cap) = *cap {
-                            let old = format!("\\{}", i);
-                            let new = text.substr(cap.0, cap.1 - cap.0);
-                            s = s.replace(&old, &new);
-                        }
-                    }
+                    let s = replace_backref(r.end_expr.clone(), text, &m.caps);
+                    self.state.push(rule.clone(), Some(s));
+                    self.process_capture(text, &m.caps.captures, &r.begin_captures);
+                    self.tokengen.generate(pos.1, &self.state);
+                });
+                rule.do_beginwhile(|r| {
+                    let s = replace_backref(r.while_expr.clone(), text, &m.caps);
                     self.state.push(rule.clone(), Some(s));
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.tokengen.generate(pos.1, &self.state);
@@ -136,7 +153,10 @@ impl Tokenizer {
             .into_iter()
             .filter(|x| x.caps.start() != x.caps.end())
             .min_by_key(|x| x.caps.start());
-        let end_match = state.end_expr.as_ref().and_then(|expr| expr.find(text));
+        let end_match = match state.rule.display() {
+            Type::BeginEnd => state.expr.as_ref().and_then(|expr| expr.find(text)),
+            _ => None,
+        };
 
         match (pattern_match, end_match) {
             (None, None) => BestMatchResult::None,
@@ -176,7 +196,7 @@ impl Tokenizer {
 
 struct RuleState {
     rule: Rule,
-    end_expr: Option<Regex>,
+    expr: Option<Regex>,
 }
 
 struct State {
@@ -200,7 +220,7 @@ impl State {
     fn push(&mut self, rule: Rule, expr: Option<String>) {
         self.st.push(RuleState {
             rule: rule.clone(),
-            end_expr: expr.map(|s| Regex::new(&s)),
+            expr: expr.map(|s| Regex::new(&s)),
         });
         self.scopes.push(rule.name());
     }
@@ -254,4 +274,15 @@ pub struct Token {
     pub start: usize,
     pub end: usize,
     pub scopes: Vec<String>,
+}
+
+fn replace_backref<'a>(mut s: String, text: StrPiece<'a>, m: &regex::MatchResult) -> String {
+    for (i, cap) in m.captures.iter().enumerate().skip(1) {
+        if let Some(ref cap) = *cap {
+            let old = format!("\\{}", i);
+            let new = text.substr(cap.0, cap.1 - cap.0);
+            s = s.replace(&old, &new);
+        }
+    }
+    s
 }
