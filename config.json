@@ -5,10 +5,12 @@
         "syntaxes/c++.json",
         "syntaxes/c.json",
         "syntaxes/python.json",
+        "syntaxes/perl6.json",
         "syntaxes/haskell.json",
         "syntaxes/javascript.json",
         "syntaxes/toml.json",
-        "syntaxes/json.json"
+        "syntaxes/json.json",
+        "syntaxes/carel.json"
     ],
     "themes": [
         {

@@ -1,0 +1,36 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Carel",
+	"fileTypes": ["cr"],
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.carel",
+				"match": "\\b(if|ifelse|else|repeat|def)\\b"
+			}, {
+				"name": "support.function.builtin.carel",
+				"match": "\\b(move|turn_left|turn_right)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.carel",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.carel",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.carel"
+}

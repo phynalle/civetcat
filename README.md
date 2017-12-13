@@ -14,6 +14,8 @@ cv [-n] [file.. ]
 * Javascript
 * TOML
 * JSON
+* Perl 6
+* Carel (reproduced from Karel by [carpedm20](https://github.com/carpedm20))
 
 ### Theme
 * Monokai (default)
