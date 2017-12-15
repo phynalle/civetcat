@@ -10,7 +10,8 @@
         "syntaxes/javascript.json",
         "syntaxes/toml.json",
         "syntaxes/json.json",
-        "syntaxes/carel.json"
+        "syntaxes/karel.json",
+        "syntaxes/java.json"
     ],
     "themes": [
         {

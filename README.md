@@ -12,10 +12,11 @@ cv [-n] [file.. ]
 * Python
 * Haskell
 * Javascript
+* Java
 * TOML
 * JSON
 * Perl 6
-* Carel (reproduced from Karel by [carpedm20](https://github.com/carpedm20))
+* Karel (reproduced from Karel by [carpedm20](https://github.com/carpedm20/karel-dataset))
 
 ### Theme
 * Monokai (default)
