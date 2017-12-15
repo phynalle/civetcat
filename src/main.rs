@@ -148,24 +148,16 @@ impl Printer {
         let mut reader = BufReader::new(r);
         loop {
             let mut line = String::new();
-            let (text, newline_char) = match reader.read_line(&mut line) {
+            match reader.read_line(&mut line) {
                 Ok(0) => break,
-                Ok(mut n) => {
-                    if line.ends_with('\n') {
-                        n -= 1;
-                        if line.ends_with("\r\n") {
-                            n -= 1;
-                        }
-                    }
-                    line.split_at(n)
-                }
                 Err(e) => panic!("{}", e),
+                _ => (),
             };
 
             if self.options.display_number {
                 let _ = o.write_fmt(format_args!("{:6}\t", line_num));
             }
-            let _ = o.write_fmt(format_args!("{}{}", f(text), newline_char));
+            let _ = o.write_fmt(format_args!("{}", f(&line)));
             line_num += 1;
         }
         let _ = o.flush();
