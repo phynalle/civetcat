@@ -143,17 +143,21 @@ impl StyleTree {
         self.root.insert(&keys, value);
     }
 
-    pub fn get(&self, key: &str) -> Option<Style> {
-        let keys: Vec<_> = key.split('.').collect();
-        self.root.get(&keys)
+    pub fn get(&self, key: &str) -> Style {
+        let mut style = Style::empty();
+        for scope_name in key.split(' ').filter(|s| !s.is_empty()) {
+            let keys: Vec<_> = scope_name.split('.').collect();
+            if let Some(s) = self.root.get(&keys) {
+                style = style.from(s); 
+            }
+        }
+        style
     }
 
     pub fn style<T: AsRef<str>>(&self, keys: &[T]) -> Style {
         let mut style = Style::empty();
         for key in keys {
-            if let Some(s) = self.get(key.as_ref()) {
-                style = style.from(s);
-            }
+            style = style.from(self.get(key.as_ref()));
         }
         style
     }
