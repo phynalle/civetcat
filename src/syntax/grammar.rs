@@ -100,6 +100,8 @@ impl Tokenizer {
                     self.state.push(&rule, Some(s));
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.generate_token(pos.1);
+
+                    self.state.push_scope(&r.content_name);
                 });
                 rule.do_beginwhile(|r| {
                     let s = replace_backref(r.while_expr.clone(), text, &m.caps);
@@ -127,10 +129,6 @@ impl Tokenizer {
                 None
             }
         }
-    }
-
-    fn done(&self) {
-        assert!(self.state.depth() == 1);
     }
 
     fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
@@ -197,7 +195,7 @@ impl RuleState {
 
 struct State {
     st: Vec<RuleState>,
-    scopes: Vec<Option<String>>,
+    scopes: Vec<Vec<Option<String>>>,
 }
 
 impl State {
@@ -218,13 +216,21 @@ impl State {
             rule: rule.clone(),
             expr: expr.map(|s| Regex::new(&s)),
         });
-        self.scopes.push(rule.name());
+        self.scopes.push(vec![rule.name()]);
+    }
+
+    fn push_scope(&mut self, scope: &Option<String>) {
+        self.scopes.iter_mut().rev().nth(0).unwrap().push(scope.clone())
     }
 
     fn pop(&mut self) {
         assert!(!self.st.is_empty());
         self.st.pop();
         self.scopes.pop();
+    }
+
+    fn scopes(&self) -> Vec<String> {
+        self.scopes.iter().flat_map(|v| v.iter()).filter_map(|s| s.clone()).collect()
     }
 
     #[allow(dead_code)]
@@ -260,7 +266,7 @@ impl TokenGenerator {
         Token {
             start,
             end,
-            scopes: state.scopes.iter().filter_map(|s| s.clone()).collect(),
+            scopes: state.scopes(),
         }
     }
 }

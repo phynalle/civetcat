@@ -23,7 +23,6 @@ impl Regex {
             SearchOptions::SEARCH_OPTION_NONE,
             Some(&mut region),
         ).map(|_| {
-            let (start, end) = region.pos(0).unwrap();
             let captures = (0..region.len())
                 .map(|pos| region
                     .pos(pos)

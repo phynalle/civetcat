@@ -16,6 +16,7 @@ pub struct RawRule {
     pub include: Option<String>,
     pub name: Option<String>,
     pub scope_name: Option<String>,
+    pub content_name: Option<String>,
     #[serde(rename = "match")]
     pub match_expr: Option<String>,
     pub captures: Option<RawCapture>,

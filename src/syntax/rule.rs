@@ -187,6 +187,7 @@ pub struct MatchRule {
 pub struct BeginEndRule {
     pub id: RuleId,
     pub name: Option<String>,
+    pub content_name: Option<String>,
 
     pub begin_expr: Regex,
     pub end_expr: String,
@@ -312,6 +313,7 @@ impl Compiler {
             Inner::BeginEnd(BeginEndRule {
                 id: rule_id,
                 name: rule.name.clone(),
+                content_name: rule.content_name.clone(),
                 begin_expr: Regex::new(rule.begin.as_ref().unwrap()),
                 end_expr: rule.end.clone().unwrap(),
                 begin_captures: self.compile_captures(&rule.begin_captures, ctx),
