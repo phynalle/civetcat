@@ -39,6 +39,10 @@ impl<'a> StrPiece<'a> {
     pub fn get(&self) -> &'a str {
         &self.s[self.pos..self.pos + self.len]
     }
+
+    pub fn full_text(&self) -> &'a str {
+        self.s
+    }
 }
 
 impl<'a> Deref for StrPiece<'a> {

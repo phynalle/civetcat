@@ -1,4 +1,4 @@
-use onig::{self, RegexOptions, Syntax};
+use onig::{self, RegexOptions, Syntax, Region, SearchOptions};
 use syntax::str_piece::StrPiece;
 
 pub struct Regex {
@@ -14,11 +14,23 @@ impl Regex {
     }
 
     pub fn find<'a>(&self, text: StrPiece<'a>) -> Option<MatchResult> {
-        self.re.captures(&text).map(|cap| {
-            let mut captures = Vec::new();
-            for pos in cap.iter_pos() {
-                captures.push(pos);
-            }
+        let offset = text.start();
+        let mut region = Region::new();
+        self.re.search_with_options(
+            text.full_text(),
+            offset,
+            text.end(),
+            SearchOptions::SEARCH_OPTION_NONE,
+            Some(&mut region),
+        ).map(|_| {
+            let (start, end) = region.pos(0).unwrap();
+            let captures = (0..region.len())
+                .map(|pos| region
+                    .pos(pos)
+                    .map( |(start, end)|{
+                         (start - offset, end - offset)}
+                    ))
+                .collect();
             MatchResult { captures }
         })
     }
