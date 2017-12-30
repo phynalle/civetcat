@@ -72,6 +72,11 @@ impl Tokenizer {
 
         let tokens: Vec<Token> = self.tokengen.tokens.drain(..).collect();
         self.tokengen = TokenGenerator::new();
+        /*
+        for token in &tokens {
+            println!("Token from {} to {} with scopes {:?}", token.start, token.end, token.scopes);
+        }
+        */
         tokens
     }
 
@@ -117,6 +122,7 @@ impl Tokenizer {
                 {
                     let rule = self.state.top().rule.clone();
                     rule.do_beginend(|r| {
+                        self.state.pop_addition_scope();
                         self.process_capture(text, &m.captures, &r.end_captures);
                     });
                 }
@@ -130,6 +136,7 @@ impl Tokenizer {
             }
         }
     }
+
 
     fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
         let state = self.state.top();
@@ -164,17 +171,50 @@ impl Tokenizer {
         captured: &[Option<(usize, usize)>],
         capture_group: &CaptureGroup,
     ) {
+        if captured.len() == 0 {
+            return;
+        }
+
+        let mut st: Vec<(usize, usize)> = Vec::new();
         for (i, cap) in captured.into_iter().enumerate() {
             if let Some(pos) = *cap {
-                if let Some(rule) = capture_group.0.get(&i) {
-                    let captured_text = text.substr(pos.0, pos.1 - pos.0);
-                    self.generate_token(captured_text.start());
-                    self.state.push(rule.upgrade().as_ref().unwrap(), None);
-                    self.tokenize_string(captured_text);
-                    self.state.pop();
+                if let Some(weak_rule) = capture_group.0.get(&i) {
+                    let capture_start = pos.0;
+                    let capture_end = pos.1;
+                    let capture_len = capture_end - capture_start;
+                    let capture_text = text.substr(capture_start, capture_len);
+
+                   while !st.is_empty() && st[st.len() - 1].1 <= capture_start {
+                        self.generate_token(st[st.len()-1].1);
+                        st.pop();
+
+                        self.state.pop();
+                    }
+
+                    self.generate_token(capture_text.start());
+
+                    let rule = weak_rule.upgrade().unwrap(); 
+                    if rule.has_match() {
+                        self.state.push(&rule, None);
+                        self.tokenize_string(capture_text);
+                        self.state.pop();
+                        continue;
+                    }
+
+                    st.push((capture_start, capture_end));
+                    self.state.push(&rule, None);
                 }
             }
         }
+
+        while !st.is_empty() {
+            self.generate_token(st[st.len()-1].1);
+            st.pop();
+
+            self.state.pop();
+
+        }
+
     }
 
     fn generate_token(&mut self, pos: usize) {
@@ -221,6 +261,10 @@ impl State {
 
     fn push_scope(&mut self, scope: &Option<String>) {
         self.scopes.iter_mut().rev().nth(0).unwrap().push(scope.clone())
+    }
+
+    fn pop_addition_scope(&mut self) {
+        self.scopes.iter_mut().rev().nth(0).unwrap().drain(1..);
     }
 
     fn pop(&mut self) {

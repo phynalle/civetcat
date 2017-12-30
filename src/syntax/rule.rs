@@ -151,6 +151,15 @@ impl Rule {
             func(rule)
         }
     }
+
+    pub fn has_match(&self) -> bool {
+        match **self.inner {
+            Inner::Include(ref r) => {
+                !r.patterns.borrow().is_empty()
+            }
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone)]
