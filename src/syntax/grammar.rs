@@ -47,14 +47,6 @@ impl Tokenizer {
         tokenizer
     }
 
-    // pub fn tokenize(&mut self, s: &str) -> Vec<Vec<Token>> {
-    //     let mut line_tokens = Vec::new();
-    //     for line in s.lines() {
-    //         line_tokens.push(self.tokenize_line(line));
-    //     }
-    //     line_tokens
-    // }
-
     pub fn tokenize_line(&mut self, line: &str) -> Vec<Token> {
         let line_str = StrPiece::new(line);
         let while_not_matched = {
@@ -72,24 +64,20 @@ impl Tokenizer {
 
         let tokens: Vec<Token> = self.tokengen.tokens.drain(..).collect();
         self.tokengen = TokenGenerator::new();
-        /*
-        for token in &tokens {
-            println!("Token from {} to {} with scopes {:?}", token.start, token.end, token.scopes);
-        }
-        */
         tokens
     }
 
     fn tokenize_string<'b>(&mut self, mut text: StrPiece<'b>) {
         while let Some(pos) = self.tokenize_next(text) {
-            text.remove_prefix(pos);
+            let offset = text.start();
+            text.remove_prefix(pos - offset);
         }
     }
 
     fn tokenize_next<'b>(&mut self, text: StrPiece<'b>) -> Option<usize> {
         match self.best_match(text) {
             BestMatchResult::Pattern(m) => {
-                let pos = (m.caps.start() + text.start(), m.caps.end() + text.start());
+                let pos = (m.caps.start(), m.caps.end());
                 self.generate_token(pos.0);
 
                 // TOOD: remove repetitive codes below
@@ -114,10 +102,10 @@ impl Tokenizer {
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.generate_token(pos.1);
                 });
-                Some(m.caps.end())
+                Some(pos.1)
             }
             BestMatchResult::End(m) => {
-                let pos = (m.start() + text.start(), m.end() + text.start());
+                let pos = (m.start(), m.end());
                 self.generate_token(pos.0);
                 {
                     let rule = self.state.top().rule.clone();
@@ -128,7 +116,7 @@ impl Tokenizer {
                 }
                 self.generate_token(pos.1);
                 self.state.pop();
-                Some(m.end())
+                Some(pos.1)
             }
             BestMatchResult::None => {
                 self.generate_token(text.end());
@@ -182,10 +170,10 @@ impl Tokenizer {
                     let capture_start = pos.0;
                     let capture_end = pos.1;
                     let capture_len = capture_end - capture_start;
-                    let capture_text = text.substr(capture_start, capture_len);
+                    let capture_text = text.substr(capture_start - text.start(), capture_len);
 
-                   while !st.is_empty() && st[st.len() - 1].1 <= capture_start {
-                        self.generate_token(st[st.len()-1].1);
+                    while !st.is_empty() && st[st.len() - 1].1 <= capture_start {
+                        self.generate_token(st[st.len() - 1].1);
                         st.pop();
 
                         self.state.pop();
@@ -193,7 +181,7 @@ impl Tokenizer {
 
                     self.generate_token(capture_text.start());
 
-                    let rule = weak_rule.upgrade().unwrap(); 
+                    let rule = weak_rule.upgrade().unwrap();
                     if rule.has_match() {
                         self.state.push(&rule, None);
                         self.tokenize_string(capture_text);
@@ -208,7 +196,7 @@ impl Tokenizer {
         }
 
         while !st.is_empty() {
-            self.generate_token(st[st.len()-1].1);
+            self.generate_token(st[st.len() - 1].1);
             st.pop();
 
             self.state.pop();
@@ -260,7 +248,9 @@ impl State {
     }
 
     fn push_scope(&mut self, scope: &Option<String>) {
-        self.scopes.iter_mut().rev().nth(0).unwrap().push(scope.clone())
+        self.scopes.iter_mut().rev().nth(0).unwrap().push(
+            scope.clone(),
+        )
     }
 
     fn pop_addition_scope(&mut self) {
@@ -274,7 +264,11 @@ impl State {
     }
 
     fn scopes(&self) -> Vec<String> {
-        self.scopes.iter().flat_map(|v| v.iter()).filter_map(|s| s.clone()).collect()
+        self.scopes
+            .iter()
+            .flat_map(|v| v.iter())
+            .filter_map(|s| s.clone())
+            .collect()
     }
 
     #[allow(dead_code)]
@@ -326,7 +320,12 @@ fn replace_backref<'a>(mut s: String, text: StrPiece<'a>, m: &regex::MatchResult
     for (i, cap) in m.captures.iter().enumerate().skip(1) {
         if let Some(ref cap) = *cap {
             let old = format!("\\{}", i);
-            let new = text.substr(cap.0, cap.1 - cap.0);
+            let new = {
+                let sub_offset = cap.0 - text.start();
+                let sub_len = cap.1 - cap.0;
+                text.substr(sub_offset, sub_len)
+            };
+
             s = s.replace(&old, &new);
         }
     }

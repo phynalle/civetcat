@@ -154,10 +154,8 @@ impl Rule {
 
     pub fn has_match(&self) -> bool {
         match **self.inner {
-            Inner::Include(ref r) => {
-                !r.patterns.borrow().is_empty()
-            }
-            _ => false,
+            Inner::Include(ref r) => !r.patterns.borrow().is_empty(),
+            _ => true,
         }
     }
 }
