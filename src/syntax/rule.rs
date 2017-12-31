@@ -111,26 +111,21 @@ impl Rule {
         match_results
     }
 
+    fn collect_match_results<'a>(&self, patterns: &Vec<WeakRule>, text: StrPiece<'a>) -> Vec<MatchResult> {
+        let mut results = Vec::new();
+        patterns
+            .iter()
+            .map(|x| x.upgrade().unwrap())
+            .for_each(|rule| results.extend(rule.match_patterns(text)));
+        results
+    }
+
     pub fn match_subpatterns<'a>(&self, text: StrPiece<'a>) -> Vec<MatchResult> {
         match **self.inner {
             Inner::Include(_) => self.match_patterns(text),
             Inner::Match(_) => Vec::new(),
-            Inner::BeginEnd(ref r) => {
-                let mut match_results = Vec::new();
-                for pattern in &r.patterns {
-                    let pattern = pattern.upgrade().unwrap();
-                    match_results.extend(pattern.match_patterns(text));
-                }
-                match_results
-            }
-            Inner::BeginWhile(ref r) => {
-                let mut match_results = Vec::new();
-                for pattern in &r.patterns {
-                    let pattern = pattern.upgrade().unwrap();
-                    match_results.extend(pattern.match_patterns(text));
-                }
-                match_results
-            }
+            Inner::BeginEnd(ref r) => self.collect_match_results(&r.patterns, text),
+            Inner::BeginWhile(ref r) => self.collect_match_results(&r.patterns, text),
         }
     }
 

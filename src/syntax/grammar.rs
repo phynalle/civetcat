@@ -94,7 +94,7 @@ impl Tokenizer {
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.generate_token(pos.1);
 
-                    self.state.push_scope(&r.content_name);
+                    self.state.push_scope(r.content_name.clone());
                 });
                 rule.do_beginwhile(|r| {
                     let s = replace_backref(r.while_expr.clone(), text, &m.caps);
@@ -167,15 +167,13 @@ impl Tokenizer {
         for (i, cap) in captured.into_iter().enumerate() {
             if let Some(pos) = *cap {
                 if let Some(weak_rule) = capture_group.0.get(&i) {
-                    let capture_start = pos.0;
-                    let capture_end = pos.1;
+                    let (capture_start, capture_end) = pos;
                     let capture_len = capture_end - capture_start;
                     let capture_text = text.substr(capture_start - text.start(), capture_len);
 
                     while !st.is_empty() && st[st.len() - 1].1 <= capture_start {
                         self.generate_token(st[st.len() - 1].1);
                         st.pop();
-
                         self.state.pop();
                     }
 
@@ -198,11 +196,8 @@ impl Tokenizer {
         while !st.is_empty() {
             self.generate_token(st[st.len() - 1].1);
             st.pop();
-
             self.state.pop();
-
         }
-
     }
 
     fn generate_token(&mut self, pos: usize) {
@@ -247,10 +242,8 @@ impl State {
         self.scopes.push(vec![rule.name()]);
     }
 
-    fn push_scope(&mut self, scope: &Option<String>) {
-        self.scopes.iter_mut().rev().nth(0).unwrap().push(
-            scope.clone(),
-        )
+    fn push_scope(&mut self, scope: Option<String>) {
+        self.scopes.iter_mut().rev().nth(0).unwrap().push(scope)
     }
 
     fn pop_addition_scope(&mut self) {
