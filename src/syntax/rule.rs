@@ -111,12 +111,17 @@ impl Rule {
         match_results
     }
 
-    fn collect_match_results<'a>(&self, patterns: &Vec<WeakRule>, text: StrPiece<'a>) -> Vec<MatchResult> {
+    fn collect_match_results<'a>(
+        &self,
+        patterns: &Vec<WeakRule>,
+        text: StrPiece<'a>,
+    ) -> Vec<MatchResult> {
         let mut results = Vec::new();
-        patterns
-            .iter()
-            .map(|x| x.upgrade().unwrap())
-            .for_each(|rule| results.extend(rule.match_patterns(text)));
+        patterns.iter().map(|x| x.upgrade().unwrap()).for_each(
+            |rule| {
+                results.extend(rule.match_patterns(text))
+            },
+        );
         results
     }
 

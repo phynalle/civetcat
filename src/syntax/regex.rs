@@ -56,3 +56,43 @@ impl MatchResult {
         self.captures[0].unwrap().1
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! p {
+        ( $x:expr, $y:expr ) => (Some(($x, $y)));
+    }
+
+    macro_rules! pv {
+        ( $( $x:expr ),* ) => ( Some( vec![ $($x,)* ]) );
+    }
+
+    fn find<'a>(re: &Regex, haystack: StrPiece<'a>) -> Option<Vec<Option<(usize, usize)>>> {
+        re.find(haystack).map(|m| m.captures)
+    }
+
+    #[test]
+    fn match_substring_test() {
+        let haystack = StrPiece::new("abc 1234");
+
+        // the begin of substring of line may not be the begin of line.
+        let re = Regex::new("^");
+        assert_eq!(find(&re, haystack), pv![p!(0, 0)]);
+        assert_eq!(find(&re, haystack.substr(0, 5)), pv![p!(0, 0)]);
+        assert_eq!(find(&re, haystack.substr(4, 3)), None);
+
+        // the end of substring of line may not be the end of line.
+        let re = Regex::new("$");
+        assert_eq!(find(&re, haystack), pv![p!(8, 8)]);
+        assert_eq!(find(&re, haystack.substr(5, 3)), pv![p!(8, 8)]);
+        assert_eq!(find(&re, haystack.substr(4, 3)), None);
+
+        // capture positions must be in range of substring
+        let re = Regex::new("12");
+        assert_eq!(find(&re, haystack.substr(3, 2)), None);
+        assert_eq!(find(&re, haystack.substr(3, 3)), pv![p!(4, 6)]);
+        assert_eq!(find(&Regex::new("(?!)\\G"), haystack.substr(3, 0)), None);
+    }
+}

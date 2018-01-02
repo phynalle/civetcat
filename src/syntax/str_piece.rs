@@ -54,15 +54,23 @@ impl<'a> Deref for StrPiece<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_creation() {
         let s = StrPiece::new("hello, world");
-        let s2 = s.substr(0, 5);
-        let s5 = s.substr(4, 4);
+        assert_eq!(s.get(), "hello, world");
+        assert_eq!(s.substr(0, 5).get(), "hello");
+        assert_eq!(s.substr(7, 5).get(), "world");
+        assert_eq!(s.substr(4, 4).get(), "o, w");
 
-        assert_eq!(s2.get(), "hello");
-        assert_eq!(s2.get(), s3.get());
-        assert_eq!(s4.get(), "world");
-        assert_eq!(s5.get(), "o, w");
+        assert_eq!(
+            {
+                let mut s = s;
+                s.remove_prefix(5);
+                s
+            }.get(),
+            s.substr(5, 7).get()
+        );
     }
 }
