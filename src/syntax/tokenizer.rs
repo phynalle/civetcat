@@ -1,28 +1,8 @@
-use std::io::Result;
 use std::rc::Rc;
-use syntax::rule::{self, CaptureGroup, Compiler, Rule, RuleId, Type};
+
+use syntax::rule::{self, CaptureGroup, Grammar, Rule, Type};
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
-
-pub fn load_grammar_from_source(src_name: &str) -> Result<Grammar> {
-    let mut c = Compiler::new(src_name);
-    Ok(c.compile())
-}
-
-pub struct Grammar {
-    root_id: RuleId,
-    rules: Vec<Rule>,
-}
-
-impl Grammar {
-    pub fn new(rules: Vec<Rule>, root_id: RuleId) -> Grammar {
-        Grammar { root_id, rules }
-    }
-
-    pub fn rule(&self, id: RuleId) -> Rule {
-        self.rules[id].clone()
-    }
-}
 
 enum BestMatchResult {
     Pattern(rule::MatchResult),
@@ -43,7 +23,7 @@ impl Tokenizer {
             grammar: Rc::clone(grammar),
             tokengen: TokenGenerator::new(),
         };
-        tokenizer.state.push(&grammar.rule(grammar.root_id), None);
+        tokenizer.state.push(&grammar.rule(grammar.root_id()), None);
         tokenizer
     }
 

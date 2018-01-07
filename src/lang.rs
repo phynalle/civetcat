@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use syntax::grammar::{Grammar, load_grammar_from_source};
+use syntax::{Grammar, load_grammar_from_source};
 use _generated;
 
 pub fn identify(ext: &str) -> Option<&str> {

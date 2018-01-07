@@ -3,7 +3,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use serde_json;
-use syntax::grammar::Grammar;
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
 use syntax::raw_rule::{RawRule, RawCapture};
@@ -240,16 +239,31 @@ impl<T> RefWrapper<T> {
     }
 }
 
-pub struct Compiler {
+pub struct Grammar {
+    root_id: RuleId,
+    rules: Vec<Rule>,
+}
+
+impl Grammar {
+    pub fn rule(&self, id: RuleId) -> Rule {
+        self.rules[id].clone()
+    }
+
+    pub fn root_id(&self) -> RuleId {
+        self.root_id
+    }
+}
+
+pub struct GrammarBuilder {
     next_id: RuleId,
     sources: HashMap<String, RawRule>,
     rules: HashMap<usize, Rule>,
     src_name: String,
 }
 
-impl Compiler {
-    pub fn new(src: &str) -> Compiler {
-        Compiler {
+impl GrammarBuilder {
+    pub fn new(src: &str) -> GrammarBuilder {
+        GrammarBuilder {
             next_id: 0,
             sources: HashMap::new(),
             rules: HashMap::new(),
@@ -263,7 +277,7 @@ impl Compiler {
         })
     }
 
-    pub fn compile(&mut self) -> Grammar {
+    pub fn build(&mut self) -> Grammar {
         let src_name = self.src_name.clone();
         let root = {
             let raw = RefWrapper::new(self.get_source(&src_name));
@@ -276,7 +290,10 @@ impl Compiler {
             rules.push(self.rules[&i].clone());
         }
 
-        Grammar::new(rules, root.id())
+        Grammar {
+            rules,
+            root_id: root.id(),
+        }
     }
 
     fn create_rule(&mut self, rule_id: RuleId, rule: &RawRule, ctx: &Context) -> Inner {

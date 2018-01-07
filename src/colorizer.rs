@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use style::{Style, StyleTree};
-use syntax::grammar::{Tokenizer, Grammar};
+use syntax::rule::Grammar;
+use syntax::tokenizer::Tokenizer;
 
 pub struct LineColorizer {
     scopes: StyleTree,
