@@ -56,7 +56,7 @@ impl Style {
     }
 
     #[allow(dead_code)]
-    pub fn from(&self, style: Style) -> Style {
+    pub fn overlap(&self, style: Style) -> Style {
         let mut new = self.clone();
         if style.foreground.is_some() {
             new.foreground = style.foreground;
@@ -103,25 +103,31 @@ impl Style {
 
 pub struct StyleTree {
     root: Node,
-    #[allow(dead_code)]
-    global_style: Style,
+    default_style: Style,
 }
 
 impl StyleTree {
     pub fn new(style: Style) -> StyleTree {
         StyleTree {
             root: Node::new(Style::empty()),
-            global_style: style,
+            default_style: style,
         }
     }
 
     pub fn create(text: &str) -> Result<StyleTree> {
         let theme: Theme = serde_json::from_str(text)?;
-        let mut tree = StyleTree::new(theme.token_colors[0].style.clone());
+        let default_style = {
+            let mut style = theme.token_colors[0].style.clone();
+            style.background = None; // disable default background
+            style
+        };
+
+        let mut tree = StyleTree::new(default_style);
         for scope in &theme.token_colors[1..] {
             if scope.scope.is_none() {
                 continue;
             }
+
             let scope_names: Vec<&str> = scope
                 .scope
                 .as_ref()
@@ -137,7 +143,6 @@ impl StyleTree {
         Ok(tree)
     }
 
-
     fn insert(&mut self, key: &str, value: Style) {
         let keys: Vec<_> = key.split('.').collect();
         self.root.insert(&keys, value);
@@ -148,7 +153,7 @@ impl StyleTree {
         for scope_name in key.split(' ').filter(|s| !s.is_empty()) {
             let keys: Vec<_> = scope_name.split('.').collect();
             if let Some(s) = self.root.get(&keys) {
-                style = style.from(s); 
+                style = style.overlap(s);
             }
         }
         style
@@ -157,15 +162,10 @@ impl StyleTree {
     pub fn style<T: AsRef<str>>(&self, keys: &[T]) -> Style {
         let mut style = Style::empty();
         for key in keys {
-            style = style.from(self.get(key.as_ref()));
+            style = style.overlap(self.get(key.as_ref()));
         }
-        style
+        self.default_style.overlap(style)
     }
-
-    // fn print_debug(&self) {
-    //     println!("root");
-    //     self.root.print_debug(1);
-    // }
 }
 
 struct Node {
@@ -210,13 +210,4 @@ impl Node {
         }
         Some(self.value.clone())
     }
-
-    // fn print_debug(&self, depth: usize) {
-    //     use std::iter::repeat;
-    //     let blank: String = repeat("..".to_string()).take(depth).collect();
-    //     for (key, node) in &self.children {
-    //         println!("{}{} -> {:?}", blank, key, node.value.foreground);
-    //         node.print_debug(depth + 1);
-    //     }
-    // }
 }
