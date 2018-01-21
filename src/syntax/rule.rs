@@ -2,13 +2,11 @@ use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
-use serde_json;
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
 use syntax::raw_rule::{RawRule, RawCapture};
+use syntax::loader::Loader;
 use lazy::Lazy;
-
-use _generated;
 
 pub type RuleId = usize;
 
@@ -215,6 +213,8 @@ pub struct BeginWhileRule {
 
 pub struct CaptureGroup(pub HashMap<usize, WeakRule>);
 
+// ! Using RefWrapper reduces safy of the program because it has a possibility that violates
+// the rules on lifetimes of references
 struct RefWrapper<T>(*const T);
 
 impl<T> Clone for RefWrapper<T> {
@@ -256,31 +256,37 @@ impl Grammar {
 
 pub struct GrammarBuilder {
     next_id: RuleId,
+    loader: Box<Loader>,
     sources: HashMap<String, RawRule>,
     rules: HashMap<usize, Rule>,
-    src_name: String,
+    src_rule: RawRule,
 }
 
 impl GrammarBuilder {
-    pub fn new(src: &str) -> GrammarBuilder {
+    pub fn new(rule: RawRule, loader: Box<Loader>) -> GrammarBuilder {
         GrammarBuilder {
             next_id: 0,
+            loader: loader,
             sources: HashMap::new(),
             rules: HashMap::new(),
-            src_name: src.to_owned(),
+            src_rule: rule,
         }
     }
 
-    fn get_source(&mut self, source: &str) -> &RawRule {
-        self.sources.entry(source.to_owned()).or_insert_with(|| {
-            serde_json::from_str(_generated::retrieve_syntax(source)).unwrap()
-        })
+    fn get_source(&mut self, source: &str) -> RefWrapper<RawRule> {
+        if let Some(rule_ref) = self.sources.get(source) {
+            return RefWrapper::new(rule_ref);
+        }
+
+
+        let rule = self.loader.load(source).unwrap();
+        let rule_ref = self.sources.entry(source.to_owned()).or_insert(rule);
+        RefWrapper::new(rule_ref)
     }
 
     pub fn build(&mut self) -> Grammar {
-        let src_name = self.src_name.clone();
         let root = {
-            let raw = RefWrapper::new(self.get_source(&src_name));
+            let raw = RefWrapper::new(&self.src_rule);
             let ctx = Context::new(raw, raw);
             self.compile_rule(&*raw, &ctx)
         };
@@ -385,12 +391,12 @@ impl GrammarBuilder {
                         let external_sources: Vec<_> = inc.splitn(2, '#').collect();
                         let source = external_sources[0];
                         let pat = external_sources[1];
-                        let new_root = RefWrapper::new(self.get_source(source));
+                        let new_root = self.get_source(source);
                         let ctx = Context::new(ctx._self, new_root);
                         self.compile_rule(ctx.search_pattern(pat), &ctx)
                     }
                     Some(ref inc) => {
-                        let new_root = RefWrapper::new(self.get_source(inc));
+                        let new_root = self.get_source(inc);
                         let ctx = Context::new(ctx._self, new_root);
                         self.compile_rule(&*ctx._self, &ctx)
                     }

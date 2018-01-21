@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn match_substring_test() {
+    fn match_substring() {
         let haystack = StrPiece::new("abc 1234");
 
         // the begin of substring of line may not be the begin of line.

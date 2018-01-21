@@ -12,6 +12,7 @@ enum BestMatchResult {
 
 pub struct Tokenizer {
     state: State,
+    //TODO: Rc<Grammar> should be reduced to &Grammar
     grammar: Rc<Grammar>,
     tokengen: TokenGenerator,
 }
@@ -23,6 +24,7 @@ impl Tokenizer {
             grammar: Rc::clone(grammar),
             tokengen: TokenGenerator::new(),
         };
+
         tokenizer.state.push(&grammar.rule(grammar.root_id()), None);
         tokenizer
     }
@@ -151,8 +153,13 @@ impl Tokenizer {
                     let capture_len = capture_end - capture_start;
                     let capture_text = text.substr(capture_start - text.start(), capture_len);
 
-                    while !st.is_empty() && st[st.len() - 1].1 <= capture_start {
-                        self.generate_token(st[st.len() - 1].1);
+                    loop {
+                        let prev_end = match st.last() {
+                            Some(e) if e.1 <= capture_start => e.1,
+                            _ => break,
+                        };
+
+                        self.generate_token(prev_end);
                         st.pop();
                         self.state.pop();
                     }
@@ -282,7 +289,7 @@ impl TokenGenerator {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Token {
     pub start: usize,
     pub end: usize,
@@ -303,4 +310,192 @@ fn replace_backref<'a>(mut s: String, text: StrPiece<'a>, m: &regex::MatchResult
         }
     }
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use syntax::raw_rule::RawRule;
+    use syntax::loader::Loader;
+    use syntax::rule::GrammarBuilder;
+
+    macro_rules! tokens {
+        ( $( $start:expr, $end:expr, $( $scope:expr ),* );* ) => (
+            {
+                let tokens = vec![
+                $( Token {
+                    start: $start,
+                    end: $end,
+                    scopes: vec! [ $( $scope.to_owned() ),* ],
+                }), *];
+                tokens
+            }
+       );
+    }
+
+    macro_rules! tokenize_eq {
+        ( $rule:expr, $text:expr, $tokens:expr )
+            => ( assert_eq!(tokenize($rule, $text), $tokens) );
+    }
+
+    struct EmptySourceLoader;
+
+    impl Loader for EmptySourceLoader {
+        fn load(&self, _: &str) -> Option<RawRule> {
+            None
+        }
+    }
+
+    fn tokenizer(rule_text: &str) -> Tokenizer {
+        let rule_text = format!(r#"{{ "patterns": [{}] }}"#, rule_text);
+        let rawrule = RawRule::from_str(&rule_text);
+        assert!(rawrule.is_ok());
+
+        let rawrule = rawrule.unwrap();
+        let grammar = GrammarBuilder::new(rawrule, Box::new(EmptySourceLoader)).build();
+        let grammar = Rc::new(grammar);
+        Tokenizer::new(&grammar)
+    }
+
+    fn tokenize(rule_text: &str, text: &str) -> Vec<Token> {
+        let mut tok = tokenizer(rule_text);
+        tok.tokenize_line(text)
+    }
+
+    #[test]
+    fn tokenize_match() {
+        tokenize_eq!(
+            r#"{ "match": "(hello|world)", "name": "greet.test" }"#,
+            "hello, world",
+            tokens!(0, 5, "greet.test"; 5, 7, ; 7, 12, "greet.test")
+        );
+    }
+
+    #[test]
+    fn tokenize_beginend() {
+        tokenize_eq!(
+            r#"{ "begin": "\\(", "end": "\\)" }"#,
+            "  (coco is fun! XD) ",
+            tokens!(0, 2, ; 2, 3, ; 3, 18, ; 18, 19, ; 19, 20, )
+        );
+
+        tokenize_eq!(
+            r#"{ "begin": "\\(", "end": "\\)", "name": "parens" }"#,
+            "  (coco is fun! XD) ",
+            tokens!(0, 2, ; 2, 3, "parens"; 3, 18, "parens"; 18, 19, "parens"; 19, 20, )
+        );
+
+        tokenize_eq!(
+            r#"{ "begin": "\\(", "end": "\\)", "contentName": "parens.content" }"#,
+            "  (coco is fun! XD) ",
+            tokens!(0, 2, ; 2, 3, ; 3, 18, "parens.content"; 18, 19, ; 19, 20, )
+        );
+
+        tokenize_eq!(
+            r#"{ "begin": "\\(", "end": "\\)", "name": "parens", "contentName": "parens.content" }"#,
+            "  (coco is fun! XD) ",
+            tokens!(0, 2, ; 2, 3, "parens"; 3, 18, "parens", "parens.content"; 18, 19, "parens"; 19, 20, )
+        );
+
+        // end containing backref
+        tokenize_eq!(
+            r#"{ "begin": "hello, (\\w+)", "end": "bye, \\1", "name": "greet" }"#,
+            "Oh, hello, civet! nice to meet you. bye, civet.",
+            tokens!(0, 4, ; 4, 16, "greet"; 16, 36, "greet"; 36, 46, "greet"; 46, 47, )
+        );
+
+        tokenize_eq!(
+            r#"{ "begin": "123", "end": "$", "name": "123",
+                "patterns": [
+                    {"match": "1", "name": "1"},
+                    {"match": "2", "name": "2"},
+                    {"match": "3", "name": "3"}
+                ]}"#,
+            "123 0983614725",
+            tokens!(0, 3, "123"; 3, 7, "123"; 7, 8, "123", "3"; 8, 9, "123"; 9, 10, "123", "1"; 10, 12, "123"; 12, 13, "123", "2"; 13, 14, "123")
+        );
+
+        tokenize_eq!(
+            r#"{ "begin": "hello, (\\w+)", "end": "bye, \\1", "name": "greet" }"#,
+            "Oh, hello, civet! nice to meet you. bye, civet.",
+            tokens!(0, 4, ; 4, 16, "greet"; 16, 36, "greet"; 36, 46, "greet"; 46, 47, )
+        );
+    }
+
+    #[test]
+    fn tokenize_beginwhile() {}
+
+    #[test]
+    fn tokenize_capture_without_pattern() {
+        let rule_def = r#"{
+                "match": "(\\()\\s*(\\w*)\\s*(,)\\s*(\\w*)\\s*(\\))",
+                "captures": {
+                    "0": { "name": "pair" },
+                    "1": { "name": "open" },
+                    "2": { "name": "word.first" },
+                    "3": { "name": "delim" },
+                    "4": { "name": "word.second" },
+                    "5": { "name": "close" }
+                }
+            }"#;
+        let texts = vec![
+            "(,)",
+            "( x , y )"
+        ];
+        let expects = vec![
+            tokens!(0, 1, "pair", "open"; 1, 2, "pair", "delim"; 2, 3, "pair", "close"),
+            tokens!(0, 1, "pair", "open"; 1, 2, "pair"; 2, 3, "pair", "word.first";
+                    3, 4, "pair"; 4, 5, "pair", "delim"; 5, 6, "pair"; 6, 7, "pair", "word.second";
+                    7, 8, "pair"; 8, 9, "pair", "close")
+        ];
+
+        for (text, expect) in texts.into_iter().zip(expects) {
+            tokenize_eq!(rule_def, text, expect)
+        }
+    }
+
+    #[test]
+    fn tokenize_capture_with_pattern() {
+        tokenize_eq!(
+            // This rule is taken from toml
+            r#"{
+                "match":"^\\s*(\\[)([^\\[\\]]*)(\\])",
+                "name":"table",
+                "captures":{
+                    "1":{ "name":"punctuation" },
+                    "2":{ "patterns":[ {
+                        "match":"[^\\s.]+", "name":"name"
+                    } ] },
+                    "3":{ "name":"punctuation" }
+                }
+            }"#,
+            "[  table  ]",
+            tokens!(0, 1, "table", "punctuation"; 1, 3, "table"; 3, 8, "table", "name";
+                    8, 10, "table"; 10, 11, "table", "punctuation")
+        );
+    }
+
+    #[test]
+    fn backref() {
+        let re = Regex::new("#IF_(\\w+)");
+        let s = StrPiece::new("   #IF_BLOCK   ");
+        assert_eq!(
+            &replace_backref("#END_\\1".into(), s, &re.find(s).unwrap()),
+            "#END_BLOCK"
+        );
+
+        let re = Regex::new(
+            "LOCATION:\\s*([\\w\\d]+)\\s*,\\s*([\\w\\d]+)\\s*,\\s*([\\w\\d]+)\\s*;",
+        );
+        let s = StrPiece::new("LOCATION: Jeju, Ulsan, Seoul;");
+        assert_eq!(
+            &replace_backref(
+                "I lived in \\1, \\2, and \\3!".into(),
+                s,
+                &re.find(s).unwrap(),
+            ),
+            "I lived in Jeju, Ulsan, and Seoul!"
+        );
+    }
 }

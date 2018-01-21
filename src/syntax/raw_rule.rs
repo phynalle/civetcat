@@ -30,7 +30,13 @@ pub struct RawRule {
     pub repository: Option<HashMap<String, RawRule>>,
 }
 
+impl RawRule {
+    pub fn from_str(s: &str) -> serde_json::Result<RawRule> {
+        serde_json::from_str(s)
+    }
+}
+
 #[allow(dead_code)]
 pub fn test(s: &str) {
-    let _: RawRule = serde_json::from_str(s).unwrap();
+    let _ = RawRule::from_str(s).unwrap();
 }

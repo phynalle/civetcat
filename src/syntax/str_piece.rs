@@ -56,14 +56,28 @@ impl<'a> Deref for StrPiece<'a> {
 mod tests {
     use super::*;
 
+    fn helloworld<'a>() -> StrPiece<'a> {
+        StrPiece::new("hello, world") // 12 bytes
+    }
+
     #[test]
-    fn test_creation() {
-        let s = StrPiece::new("hello, world");
-        assert_eq!(s.get(), "hello, world");
+    fn intialize() {
+        assert_eq!(helloworld().get(), "hello, world");
+        assert_eq!(StrPiece::with("hello, world", 3, 8).get(), "lo, worl");
+    }
+
+    #[test]
+    fn substr() {
+        let s = helloworld();
         assert_eq!(s.substr(0, 5).get(), "hello");
         assert_eq!(s.substr(7, 5).get(), "world");
         assert_eq!(s.substr(4, 4).get(), "o, w");
+        assert_eq!(s.substr(2, 8).substr(2, 5).get(), "o, wo");
+    }
 
+    #[test]
+    fn remove_prefix() {
+        let s = helloworld();
         assert_eq!(
             {
                 let mut s = s;
