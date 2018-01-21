@@ -37,6 +37,7 @@ static EXECUTABLE_NAME: &'static str = "cv";
 #[derive(Copy, Clone)]
 struct Options {
     display_number: bool,
+    raw_control_chars: bool,
     theme: _generated::Theme,
 }
 
@@ -70,7 +71,7 @@ fn print_file<T: AsRef<str>>(options: &Options, file_name: T, printer: &mut Prin
     match File::open(file_name.as_ref()) {
         Ok(file) => {
             let path = Path::new(file_name.as_ref());
-            let grammar = if atty::is(Stream::Stdout) {
+            let grammar = if options.raw_control_chars || atty::is(Stream::Stdout) {
                 path.extension()
                     .and_then(|ext| ext.to_str())
                     .and_then(|ext| lang::identify(ext))
@@ -114,13 +115,10 @@ fn parse_options() -> Parsed {
     let matches = app::initialize().get_matches();
 
     let mut options = Options {
-        display_number: false,
+        display_number: matches.occurrences_of("number") > 0,
+        raw_control_chars: matches.occurrences_of("raw_control_chars") > 0,
         theme: theme::default(),
     };
-
-    if matches.occurrences_of("number") > 0 {
-        options.display_number = true;
-    }
 
     if let Some(theme_name) = matches.value_of("theme") {
         let themes = _generated::themes().to_vec();
