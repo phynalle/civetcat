@@ -37,6 +37,8 @@ static EXECUTABLE_NAME: &'static str = "cv";
 #[derive(Copy, Clone)]
 struct Options {
     display_number: bool,
+    number_nonblack: bool,
+    squeeze_blank: bool,
     raw_control_chars: bool,
     theme: _generated::Theme,
 }
@@ -115,10 +117,15 @@ fn parse_options() -> Parsed {
     let matches = app::initialize().get_matches();
 
     let mut options = Options {
-        display_number: matches.occurrences_of("number") > 0,
-        raw_control_chars: matches.occurrences_of("raw_control_chars") > 0,
+        display_number: false,
+        number_nonblack: matches.occurrences_of("number-nonblank") > 0,
+        squeeze_blank: matches.occurrences_of("squeeze-blank") > 0,
+        raw_control_chars: matches.occurrences_of("raw-control-chars") > 0,
         theme: theme::default(),
     };
+
+    options.display_number |= matches.occurrences_of("number") > 0;
+    options.display_number |= matches.occurrences_of("number-nonblank") > 0;
 
     if let Some(theme_name) = matches.value_of("theme") {
         let themes = _generated::themes().to_vec();
@@ -182,19 +189,33 @@ impl Printer {
         let mut o = stdout.lock();
         let mut line_num = 1;
         let mut reader = BufReader::new(r);
+        let mut prev_blank = false;
+
         loop {
             let mut line = String::new();
-            match reader.read_line(&mut line) {
+            let blank_line = match reader.read_line(&mut line) {
                 Ok(0) => break,
+                Ok(_) => {
+                    line == "\n" || line == "\r\n"
+                }
                 Err(e) => panic!("{}", e),
-                _ => (),
             };
 
-            if self.options.display_number {
-                let _ = o.write_fmt(format_args!("{:6}\t", line_num));
+            if self.options.squeeze_blank && prev_blank && blank_line {
+                continue;
             }
+            prev_blank = blank_line;
+
+            if self.options.display_number {
+                if self.options.number_nonblack && blank_line {
+                    let _ = o.write_fmt(format_args!("      \t"));
+                } else {
+                    let _ = o.write_fmt(format_args!("{:6}\t", line_num));
+                    line_num += 1;
+                }
+            }
+
             let _ = o.write_fmt(format_args!("{}", f(&line)));
-            line_num += 1;
         }
         let _ = o.flush();
     }
