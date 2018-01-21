@@ -57,6 +57,31 @@ pub fn _load_theme(theme: Theme) -> Result<StyleTree> {{
 
 {}
 
+
+lazy_static! {{
+    pub static ref LANGS: Vec<String> = {{
+        let mut v = Vec::new();
+{}
+
+        v
+    }};
+
+    pub static ref THEMES: Vec<(String, Theme)> = {{
+        let mut v = Vec::new();
+{}
+
+        v
+    }};
+}}
+
+pub fn langs() -> &'static LANGS {{
+    &LANGS
+}}
+
+pub fn themes() -> &'static THEMES {{
+    &THEMES
+}}
+
 ");
 }
 
@@ -68,8 +93,9 @@ fn main() {
     let mut func = String::new();
     let mut lt = String::new();
     let mut syn_mat = String::new();
-
     let mut theme_def = String::new();
+    let mut langs = String::new();
+    let mut themes = String::new();
 
     for path in config.languages {
         let lang = load_language(&path).expect(&format!("{} not found", path));
@@ -92,6 +118,7 @@ fn main() {
                 lang.scope_name
             ));
         }
+        langs.push_str(&format!("       v.push(\"{}\".to_owned());\n", lang.name));
     }
 
     for theme in config.themes {
@@ -105,6 +132,7 @@ fn main() {
         theme_def.push_str(&format!("    {},\n", theme.name));
         lt.push_str(&format!("        Theme::{} => {}(),\n", theme.name, _fn));
         func.push_str(&format!("{}\n", gen_load_theme_func(&theme.name)));
+        themes.push_str(&format!("       v.push((\"{}\".to_owned(), Theme::{}));\n", theme.name, theme.name));
     }
 
     let mut f = File::create("src/_generated.rs").unwrap();
@@ -116,7 +144,9 @@ fn main() {
         syn_mat,
         lg,
         lt,
-        func
+        func,
+        langs,
+        themes
     ));
 }
 

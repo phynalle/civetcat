@@ -1,6 +1,10 @@
 use _generated::{Theme, _load_theme};
 use style::StyleTree;
 
-pub fn load() -> StyleTree {
-    _load_theme(Theme::Monokai).unwrap()
+pub fn default() -> Theme {
+    Theme::Monokai
+}
+
+pub fn load(theme: Theme) -> StyleTree {
+    _load_theme(theme).unwrap()
 }

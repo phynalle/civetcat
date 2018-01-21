@@ -37,6 +37,7 @@ static EXECUTABLE_NAME: &'static str = "cv";
 #[derive(Copy, Clone)]
 struct Options {
     display_number: bool,
+    theme: _generated::Theme,
 }
 
 struct Parsed {
@@ -60,12 +61,12 @@ fn run(mut parsed: Parsed) {
         if file_name == "-" {
             printer.print(std::io::stdin(), |s| Cow::Borrowed(s));
         } else {
-            print_file(file_name.clone(), &mut printer, &ll);
+            print_file(&parsed.options, file_name.clone(), &mut printer, &ll);
         }
     }
 }
 
-fn print_file<T: AsRef<str>>(file_name: T, printer: &mut Printer, ll: &lang::LangLoader) {
+fn print_file<T: AsRef<str>>(options: &Options, file_name: T, printer: &mut Printer, ll: &lang::LangLoader) {
     match File::open(file_name.as_ref()) {
         Ok(file) => {
             let path = Path::new(file_name.as_ref());
@@ -80,7 +81,7 @@ fn print_file<T: AsRef<str>>(file_name: T, printer: &mut Printer, ll: &lang::Lan
 
             match grammar {
                 Some(g) => {
-                    let mut lc = LineColorizer::new(theme::load(), &g);
+                    let mut lc = LineColorizer::new(theme::load(options.theme), &g);
                     printer.print(file, |s| Cow::Owned(lc.process_line(s)));
                 }
                 None => printer.print(file, |s| Cow::Borrowed(s)),
@@ -112,9 +113,46 @@ fn get_exe_name() -> String {
 fn parse_options() -> Parsed {
     let matches = app::initialize().get_matches();
 
-    let mut options = Options { display_number: false };
+    let mut options = Options {
+        display_number: false,
+        theme: theme::default(),
+    };
+
     if matches.occurrences_of("number") > 0 {
         options.display_number = true;
+    }
+
+    if let Some(theme_name) = matches.value_of("theme") {
+        let themes = _generated::themes().to_vec();
+        match theme_name {
+            "list" => {
+                println!("Supported Themes");
+                for (name, _) in themes {
+                    println!(" * {}", name);
+                }
+                std::process::exit(0);
+            }
+            _ => {
+                let theme = {
+                    let theme_name = theme_name.to_lowercase();
+                    themes.into_iter()
+                        .find(|&(ref name, _)| name.to_lowercase() == theme_name)
+                        .map(|(_, th)| th)
+                };
+
+                match theme {
+                    Some(th) => options.theme = th,
+                    None => {
+                        println!("Unsupported Theme: {}", theme_name);
+                        std::process::exit(1);
+                    }
+                }
+
+                if let Some(theme) = theme {
+                    options.theme = theme;
+                }
+            }
+        }
     }
 
     let file_names = matches
