@@ -1,5 +1,5 @@
-# civet(cv)
-civet is a command line tool which has compatibility with cat. it colorize the contents of file along to the extension of each file.
+# civetcat(cv)
+civetcat is a command line tool which has compatibility with cat. it colorize the contents of file along to the extension of each file.
 
 ## Usage
 cv [-n] [file.. ]
