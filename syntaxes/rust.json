@@ -1,4 +1,5 @@
 {
+	"originyy": "This file has been copied or converted from https://github.com/zargony/atom-language-rust/blob/master/grammars/rust.cson",
 	"name": "Rust",
 	"scopeName": "source.rust",
 	"fileTypes": [
