@@ -3,6 +3,10 @@ use std::collections::HashMap;
 
 use serde_json;
 
+static FONTSTYLE_BOLD: usize = 0x01;
+static FONTSTYLE_ITALIC: usize = 0x02;
+static FONTSTYLE_UNDERLINE: usize = 0x04;
+
 pub fn load_theme(raw_text: &str) -> Result<StyleTree> {
     StyleTree::create(raw_text)
 }
@@ -24,7 +28,7 @@ struct Scope {
     name: Option<String>,
     scope: Option<JsonScope>,
     #[serde(rename = "settings")]
-    style: Style,
+    style: RawStyle,
 }
 
 #[derive(Deserialize, Debug)]
@@ -36,69 +40,10 @@ enum JsonScope {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Style {
+pub struct RawStyle {
     foreground: Option<usize>,
     background: Option<usize>,
     font_style: Option<String>,
-}
-
-impl Style {
-    pub fn empty() -> Style {
-        Style {
-            foreground: None,
-            background: None,
-            font_style: None,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.foreground.is_none() && self.background.is_none() && self.font_style.is_none()
-    }
-
-    #[allow(dead_code)]
-    pub fn overlap(&self, style: Style) -> Style {
-        let mut new = self.clone();
-        if style.foreground.is_some() {
-            new.foreground = style.foreground;
-        }
-        if style.background.is_some() {
-            new.background = style.background;
-        }
-        if style.font_style.is_some() {
-            new.font_style = style.font_style;
-        }
-        new
-    }
-
-    pub fn color(&self) -> String {
-        if self.is_empty() {
-            return Style::reset();
-        }
-
-        let mut props = Vec::new();
-        if let Some(ref font_style) = self.font_style {
-            let n = match font_style.to_lowercase().as_ref() {
-                "bold" => 1,
-                "italic" => 3,
-                "underline" => 4,
-                _ => -1,
-            };
-            if n >= 0 {
-                props.push(n.to_string());
-            }
-        }
-        if let Some(fg) = self.foreground {
-            props.push(format!("38;5;{}", fg));
-        }
-        if let Some(bg) = self.background {
-            props.push(format!("48;5;{}", bg));
-        }
-        format!("\x1B[{}m", props.join(";"))
-    }
-
-    pub fn reset() -> String {
-        "\x1B[0m".to_owned()
-    }
 }
 
 pub struct StyleTree {
@@ -117,8 +62,8 @@ impl StyleTree {
     pub fn create(text: &str) -> Result<StyleTree> {
         let theme: Theme = serde_json::from_str(text)?;
         let default_style = {
-            let mut style = theme.token_colors[0].style.clone();
-            style.background = None; // disable default background
+            let mut style = Style::from(theme.token_colors[0].style.clone());
+            style.bg = None; // disable default background
             style
         };
 
@@ -137,7 +82,7 @@ impl StyleTree {
                 })
                 .unwrap();
             for name in scope_names {
-                tree.insert(name, scope.style.clone());
+                tree.insert(name, Style::from(scope.style.clone()));
             }
         }
         Ok(tree)
@@ -152,7 +97,7 @@ impl StyleTree {
         let mut style = Style::empty();
         for scope_name in key.split(' ').filter(|s| !s.is_empty()) {
             let keys: Vec<_> = scope_name.split('.').collect();
-            if let Some(s) = self.root.get(&keys) {
+            if let Some(ref s) = self.root.get(&keys) {
                 style = style.overlap(s);
             }
         }
@@ -162,9 +107,9 @@ impl StyleTree {
     pub fn style<T: AsRef<str>>(&self, keys: &[T]) -> Style {
         let mut style = Style::empty();
         for key in keys {
-            style = style.overlap(self.get(key.as_ref()));
+            style = style.overlap(&self.get(key.as_ref()));
         }
-        self.default_style.overlap(style)
+        self.default_style.overlap(&style)
     }
 }
 
@@ -199,7 +144,7 @@ impl Node {
         }
     }
 
-    fn get(&self, keys: &[&str]) -> Option<Style> {
+    fn get(&self, keys: &[&str]) -> Option<&Style> {
         if !keys.is_empty() {
             if let Some(node) = self.children.get(keys[0]) {
                 let v = node.get(&keys[1..]);
@@ -208,6 +153,94 @@ impl Node {
                 }
             }
         }
-        Some(self.value.clone())
+        Some(&self.value)
+    }
+}
+
+#[derive(Clone)]
+pub struct Style {
+    fg: Option<usize>,
+    bg: Option<usize>,
+    fs: Option<usize>,
+}
+
+impl From<RawStyle> for Style {
+    fn from(raw_style: RawStyle) -> Self {
+        let fs = raw_style.font_style.map(|s| {
+            let mut fs = 0usize;
+            for fs_str in s.split_whitespace() {
+                match fs_str {
+                    "bold" => fs |= FONTSTYLE_BOLD,
+                    "italic" => fs |= FONTSTYLE_ITALIC,
+                    "underline" => fs |= FONTSTYLE_UNDERLINE,
+                    _ => continue,
+                }
+            }
+            fs
+        });
+
+        Style {
+            fg: raw_style.foreground,
+            bg: raw_style.background,
+            fs,
+        }
+    }
+}
+
+impl Style {
+    pub fn empty() -> Style {
+        Style {
+            fg: None,
+            bg: None,
+            fs: None,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.fg.is_none() && self.bg.is_none() && self.fs.is_none()
+    }
+
+    pub fn overlap(&self, style: &Style) -> Style {
+        let mut new = self.clone();
+        if style.fg.is_some() {
+            new.fg = style.fg.clone();
+        }
+        if style.bg.is_some() {
+            new.bg = style.bg.clone();
+        }
+        if style.fs.is_some() {
+            new.fs = style.fs.clone();
+        }
+        new
+    }
+
+    pub fn color(&self) -> String {
+        if self.is_empty() {
+            return Style::reset();
+        }
+
+        let mut props = Vec::new();
+        if let Some(fs) = self.fs {
+            if fs & FONTSTYLE_BOLD > 0 {
+                props.push("1".to_owned());
+            }
+            if fs & FONTSTYLE_ITALIC > 0 {
+                props.push("3".to_owned());
+            }
+            if fs & FONTSTYLE_UNDERLINE > 0 {
+                props.push("4".to_owned());
+            }
+        }
+        if let Some(fg) = self.fg {
+            props.push(format!("38;5;{}", fg));
+        }
+        if let Some(bg) = self.bg {
+            props.push(format!("48;5;{}", bg));
+        }
+        format!("\x1B[{}m", props.join(";"))
+    }
+
+    pub fn reset() -> String {
+        "\x1B[0m".to_owned()
     }
 }

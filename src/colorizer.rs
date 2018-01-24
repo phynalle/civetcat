@@ -18,14 +18,18 @@ impl LineColorizer {
 
     pub fn process_line(&mut self, line: &str) -> String {
         let tokens = self.tokenizer.tokenize_line(line);
-        let mut colored_tokens: Vec<_> = tokens
+        let colored_tokens: Vec<_> = tokens
             .into_iter()
             .map(|t| {
                 let style = self.scopes.style(&t.scopes);
-                format!("{}{}", style.color(), &line[t.start..t.end])
+                format!(
+                    "{}{}{}",
+                    style.color(),
+                    &line[t.start..t.end],
+                    Style::reset()
+                )
             })
             .collect();
-        colored_tokens.push(Style::reset());
         colored_tokens.join("")
     }
 }
