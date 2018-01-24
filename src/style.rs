@@ -19,12 +19,12 @@ struct Theme {
     // comment: String,
     // semantic_class: String,
     // color_space_name: String,
-    token_colors: Vec<Scope>,
+    token_colors: Vec<TokenColor>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct Scope {
+struct TokenColor {
     name: Option<String>,
     scope: Option<JsonScope>,
     #[serde(rename = "settings")]
@@ -52,28 +52,26 @@ pub struct StyleTree {
 }
 
 impl StyleTree {
-    pub fn new(style: Style) -> StyleTree {
+    pub fn new() -> StyleTree {
         StyleTree {
             root: Node::new(Style::empty()),
-            default_style: style,
+            default_style: Style::empty(),
         }
     }
 
     pub fn create(text: &str) -> Result<StyleTree> {
         let theme: Theme = serde_json::from_str(text)?;
-        let default_style = {
-            let mut style = Style::from(theme.token_colors[0].style.clone());
-            style.bg = None; // disable default background
-            style
-        };
-
-        let mut tree = StyleTree::new(default_style);
-        for scope in &theme.token_colors[1..] {
-            if scope.scope.is_none() {
+        let mut tree = StyleTree::new();
+        for token_color in &theme.token_colors {
+            if token_color.scope.is_none() {
+                // set default style
+                let mut style = Style::from(token_color.style.clone());
+                style.bg = None; // disable default background
+                tree.default_style = style;
                 continue;
             }
 
-            let scope_names: Vec<&str> = scope
+            let scope_names: Vec<&str> = token_color
                 .scope
                 .as_ref()
                 .map(|scope| match *scope {
@@ -82,7 +80,7 @@ impl StyleTree {
                 })
                 .unwrap();
             for name in scope_names {
-                tree.insert(name, Style::from(scope.style.clone()));
+                tree.insert(name, Style::from(token_color.style.clone()));
             }
         }
         Ok(tree)
