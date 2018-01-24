@@ -13,8 +13,7 @@ extern crate clap;
 extern crate atty;
 
 use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{BufReader, BufRead, Result, Read, Write};
 use std::iter::Iterator;
 use std::path::Path;
 use std::borrow::Cow;
@@ -62,38 +61,42 @@ fn run(mut parsed: Parsed) {
     for file_name in &parsed.file_names {
         let mut printer = Printer::new(parsed.options);
         if file_name == "-" {
-            printer.print(std::io::stdin(), |s| Cow::Borrowed(s));
+            let _ = printer.print(std::io::stdin(), |s| Cow::Borrowed(s));
         } else {
-            print_file(&parsed.options, file_name.clone(), &mut printer, &ll);
+            match print_file(&parsed.options, &file_name, &mut printer, &ll) {
+                Err(e) => print_error(&format!("{}: {}", file_name, e)),
+                _ => (),
+            }
         }
     }
 }
 
-fn print_file<T: AsRef<str>>(options: &Options, file_name: T, printer: &mut Printer, ll: &lang::LangLoader) {
-    match File::open(file_name.as_ref()) {
-        Ok(file) => {
-            let path = Path::new(file_name.as_ref());
-            let grammar = if options.raw_control_chars || atty::is(Stream::Stdout) {
-                path.extension()
-                    .and_then(|ext| ext.to_str())
-                    .and_then(|ext| lang::identify(ext))
-                    .map(|ln| ll.load_grammar(ln))
-            } else {
-                None
-            };
+fn print_file<T: AsRef<str>>(
+    options: &Options,
+    file_name: T,
+    printer: &mut Printer,
+    ll: &lang::LangLoader,
+) -> Result<()> {
+    let file = File::open(file_name.as_ref())?;
+    let path = Path::new(file_name.as_ref());
+    let grammar = if options.raw_control_chars || atty::is(Stream::Stdout) {
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .and_then(|ext| lang::identify(ext))
+            .map(|ln| ll.load_grammar(ln))
+    } else {
+        None
+    };
 
-            match grammar {
-                Some(g) => {
-                    let mut lc = LineColorizer::new(theme::load(options.theme), &g);
-                    printer.print(file, |s| Cow::Owned(lc.process_line(s)));
-                }
-                None => printer.print(file, |s| Cow::Borrowed(s)),
-            }
+    match grammar {
+        Some(g) => {
+            let mut lc = LineColorizer::new(theme::load(options.theme), &g);
+            printer.print(file, |s| Cow::Owned(lc.process_line(s)))?;
         }
-        Err(e) => {
-            print_error(&format!("{}: {}", file_name.as_ref(), e));
-        }
+        None => printer.print(file, |s| Cow::Borrowed(s))?,
     }
+
+    Ok(())
 }
 
 fn print_error(err: &str) {
@@ -140,7 +143,8 @@ fn parse_options() -> Parsed {
             _ => {
                 let theme = {
                     let theme_name = theme_name.to_lowercase();
-                    themes.into_iter()
+                    themes
+                        .into_iter()
                         .find(|&(ref name, _)| name.to_lowercase() == theme_name)
                         .map(|(_, th)| th)
                 };
@@ -180,7 +184,7 @@ impl Printer {
         Printer { options }
     }
 
-    fn print<R, F>(&mut self, r: R, mut f: F)
+    fn print<R, F>(&mut self, r: R, mut f: F) -> Result<()>
     where
         R: Read,
         F: for<'a> FnMut(&'a str) -> Cow<'a, str>,
@@ -193,12 +197,9 @@ impl Printer {
 
         loop {
             let mut line = String::new();
-            let blank_line = match reader.read_line(&mut line) {
-                Ok(0) => break,
-                Ok(_) => {
-                    line == "\n" || line == "\r\n"
-                }
-                Err(e) => panic!("{}", e),
+            let blank_line = match reader.read_line(&mut line)? {
+                0 => break,
+                _ => line == "\n" || line == "\r\n",
             };
 
             if self.options.squeeze_blank && prev_blank && blank_line {
@@ -218,5 +219,7 @@ impl Printer {
             let _ = o.write_fmt(format_args!("{}", f(&line)));
         }
         let _ = o.flush();
+
+        Ok(())
     }
 }
