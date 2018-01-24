@@ -1,4 +1,5 @@
 {
+	"origin": "This file has been copied or converted from https://github.com/bradrobertson/sublime-packages/blob/master/Haskell/Haskell.tmLanguage",
     "fileTypes":[
         "hs"
     ],

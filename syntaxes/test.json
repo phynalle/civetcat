@@ -1,0 +1,51 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "fileTypes": ["test"],
+    "name": "Test",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#blockn"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.test",
+				"match": "\\b(ifa|while|for|return)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.test",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.test",
+					"match": "\\\\."
+				}
+			]
+		},
+		"blockn": {
+			"name": "comment.test",
+			"begin": "\\+",
+			"beginCaptures": [
+				{"name": "keyword.control.test"}
+			],
+			
+			"while": "(^|\\G)\\--",
+			"patterns": [
+				{
+					"include": "#strings"
+				}
+			]
+		}
+
+	},
+	"scopeName": "source.test"
+}

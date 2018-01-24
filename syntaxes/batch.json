@@ -1,4 +1,5 @@
 {  
+	"origin": "This file has been copied or converted from https://github.com/Microsoft/vscode/blob/master/extensions/bat/syntaxes/batchfile.tmLanguage.json",
     "patterns":[  
        {  
           "name":"keyword.command.dosbatch",

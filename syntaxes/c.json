@@ -1,4 +1,5 @@
 {
+	"origin": "This file has been copied or converted from https://github.com/Microsoft/vscode/blob/master/extensions/cpp/syntaxes/c.json",
 	"information_for_contributors": [
 		"This file has been converted from https://github.com/atom/language-c/blob/master/grammars/c.cson",
 		"If you want to provide a fix or improvement, please create a pull request against the original repository.",

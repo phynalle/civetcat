@@ -1,4 +1,5 @@
 {
+	"origin": "This file has been copied or converted from https://github.com/Microsoft/vscode/blob/master/extensions/perl/syntaxes/perl6.tmLanguage.json",
 	"information_for_contributors": [
 		"This file has been converted from https://github.com/textmate/perl.tmbundle/blob/master/Syntaxes/Perl%206.tmLanguage",
 		"If you want to provide a fix or improvement, please create a pull request against the original repository.",

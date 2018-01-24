@@ -1,11 +1,12 @@
 {
+	"origin": "This file has been copied or converted from https://github.com/Microsoft/vscode/blob/master/extensions/python/syntaxes/MagicPython.tmLanguage.json",
 	"information_for_contributors": [
 		"This file has been converted from https://github.com/MagicStack/MagicPython/blob/master/grammars/MagicPython.tmLanguage",
 		"If you want to provide a fix or improvement, please create a pull request against the original repository.",
 		"Once accepted there, we are happy to receive an update request."
 	],
 	"version": "https://github.com/MagicStack/MagicPython/commit/b453f26ed856c9b16a053517c41207e3a72cc7d5",
-	"name": "MagicPython",
+	"name": "Python",
 	"scopeName": "source.python",
 	"fileTypes": [
 		"py",

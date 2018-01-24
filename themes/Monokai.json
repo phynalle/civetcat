@@ -1,4 +1,5 @@
 {
+    "origin": "https://github.com/Microsoft/vscode/blob/master/extensions/theme-monokai/themes/monokai-color-theme.json",
     "tokenColors": [
       {
         "settings": {

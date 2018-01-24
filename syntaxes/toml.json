@@ -1,4 +1,5 @@
 {
+	"origin": "This file has been copied or converted from https://github.com/Gakai/sublime_toml_highlighting/blob/master/TOML.tmLanguage",
     "fileTypes":[
         "toml",
         "tml"
