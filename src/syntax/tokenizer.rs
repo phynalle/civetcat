@@ -393,9 +393,14 @@ mod tests {
         );
 
         tokenize_eq!(
-            r#"{ "begin": "\\(", "end": "\\)", "name": "parens", "contentName": "parens.content" }"#,
+            r#"{ "begin": "\\(", "end": "\\)", "name": "parens",
+                 "contentName": "parens.content" }"#,
             "  (coco is fun! XD) ",
-            tokens!(0, 2, ; 2, 3, "parens"; 3, 18, "parens", "parens.content"; 18, 19, "parens"; 19, 20, )
+            tokens!(0, 2, ;
+                    2, 3, "parens";
+                    3, 18, "parens", "parens.content";
+                    18, 19, "parens";
+                    19, 20, )
         );
 
         // end containing backref
@@ -413,7 +418,15 @@ mod tests {
                     {"match": "3", "name": "3"}
                 ]}"#,
             "123 0983614725",
-            tokens!(0, 3, "123"; 3, 7, "123"; 7, 8, "123", "3"; 8, 9, "123"; 9, 10, "123", "1"; 10, 12, "123"; 12, 13, "123", "2"; 13, 14, "123")
+            tokens!(
+                0, 3, "123";
+                3, 7, "123";
+                7, 8, "123", "3";
+                8, 9, "123";
+                9, 10, "123", "1";
+                10, 12, "123";
+                12, 13, "123", "2";
+                13, 14, "123")
         );
 
         tokenize_eq!(
@@ -439,16 +452,14 @@ mod tests {
                     "5": { "name": "close" }
                 }
             }"#;
-        let texts = vec![
-            "(,)",
-            "( x , y )"
-        ];
-        let expects = vec![
-            tokens!(0, 1, "pair", "open"; 1, 2, "pair", "delim"; 2, 3, "pair", "close"),
-            tokens!(0, 1, "pair", "open"; 1, 2, "pair"; 2, 3, "pair", "word.first";
+        let texts = vec!["(,)", "( x , y )"];
+        let expects =
+            vec![
+                tokens!(0, 1, "pair", "open"; 1, 2, "pair", "delim"; 2, 3, "pair", "close"),
+                tokens!(0, 1, "pair", "open"; 1, 2, "pair"; 2, 3, "pair", "word.first";
                     3, 4, "pair"; 4, 5, "pair", "delim"; 5, 6, "pair"; 6, 7, "pair", "word.second";
-                    7, 8, "pair"; 8, 9, "pair", "close")
-        ];
+                    7, 8, "pair"; 8, 9, "pair", "close"),
+            ];
 
         for (text, expect) in texts.into_iter().zip(expects) {
             tokenize_eq!(rule_def, text, expect)
