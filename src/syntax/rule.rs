@@ -67,14 +67,13 @@ impl Rule {
         WeakRule { inner: Rc::downgrade(&self.inner) }
     }
 
-    pub fn match_patterns<'a>(&self, text: StrPiece<'a>) -> Vec<MatchResult> {
-        let mut match_results = Vec::new();
+    fn find_match<'a>(&self, text: StrPiece<'a>, match_results: &mut Vec<MatchResult>) {
         match **self.inner {
             Inner::Include(ref r) => {
-                let patterns = r.patterns.borrow();
-                for pattern in &(*patterns) {
-                    let pattern = pattern.upgrade().unwrap();
-                    match_results.extend(pattern.match_patterns(text));
+                let pats = r.patterns.borrow();
+                for pat in &(*pats) {
+                    let pat = pat.upgrade().unwrap();
+                    pat.find_match(text, match_results);
                 }
             }
             Inner::Match(ref r) => {
@@ -105,29 +104,33 @@ impl Rule {
                 }
             }
         }
+    }
+
+    fn match_pattern<'a>(&self, text: StrPiece<'a>) -> Vec<MatchResult> {
+        let mut match_results = Vec::new();
+        self.find_match(text, &mut match_results);
         match_results
     }
 
-    fn collect_match_results<'a>(
+    fn match_subpatterns<'a>(
         &self,
         patterns: &Vec<WeakRule>,
         text: StrPiece<'a>,
     ) -> Vec<MatchResult> {
         let mut results = Vec::new();
-        patterns.iter().map(|x| x.upgrade().unwrap()).for_each(
-            |rule| {
-                results.extend(rule.match_patterns(text))
-            },
-        );
+        patterns
+            .iter()
+            .map(|x| x.upgrade().unwrap())
+            .for_each(|rule| rule.find_match(text, &mut results));
         results
     }
 
-    pub fn match_subpatterns<'a>(&self, text: StrPiece<'a>) -> Vec<MatchResult> {
+    pub fn collect_matches<'a>(&self, text: StrPiece<'a>) -> Vec<MatchResult> {
         match **self.inner {
-            Inner::Include(_) => self.match_patterns(text),
+            Inner::Include(_) => self.match_pattern(text),
             Inner::Match(_) => Vec::new(),
-            Inner::BeginEnd(ref r) => self.collect_match_results(&r.patterns, text),
-            Inner::BeginWhile(ref r) => self.collect_match_results(&r.patterns, text),
+            Inner::BeginEnd(ref r) => self.match_subpatterns(&r.patterns, text),
+            Inner::BeginWhile(ref r) => self.match_subpatterns(&r.patterns, text),
         }
     }
 

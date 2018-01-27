@@ -1,3 +1,4 @@
+use std::mem::replace;
 use std::rc::Rc;
 
 use syntax::rule::{self, CaptureGroup, Grammar, Rule, Type};
@@ -43,10 +44,7 @@ impl Tokenizer {
         }
 
         self.tokenize_string(line_str);
-
-        let tokens: Vec<Token> = self.tokengen.tokens.drain(..).collect();
-        self.tokengen = TokenGenerator::new();
-        tokens
+        self.tokengen.take()
     }
 
     fn tokenize_string<'b>(&mut self, mut text: StrPiece<'b>) {
@@ -112,7 +110,7 @@ impl Tokenizer {
         let state = self.state.top();
         let pattern_match = state
             .rule
-            .match_subpatterns(text)
+            .collect_matches(text)
             .into_iter()
             .filter(|x| x.caps.start() != x.caps.end())
             .min_by_key(|x| x.caps.start());
@@ -286,6 +284,11 @@ impl TokenGenerator {
             end,
             scopes: state.scopes(),
         }
+    }
+
+    fn take(&mut self) -> Vec<Token> {
+        self.pos = 0;
+        replace(&mut self.tokens, Vec::new())
     }
 }
 
