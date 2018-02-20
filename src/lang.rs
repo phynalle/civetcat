@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use syntax::{Grammar, load_grammar_from_source};
+use syntax::{load_grammar_from_source, Grammar};
 use _generated;
 
 pub fn identify(ext: &str) -> Option<&str> {
@@ -15,7 +15,9 @@ pub struct LangLoader {
 
 impl LangLoader {
     pub fn new() -> LangLoader {
-        LangLoader { grammars: RefCell::new(HashMap::new()) }
+        LangLoader {
+            grammars: RefCell::new(HashMap::new()),
+        }
     }
 
     pub fn load_grammar(&self, lang: &str) -> Rc<Grammar> {
@@ -25,10 +27,9 @@ impl LangLoader {
         match load_grammar_from_source(lang) {
             Ok(g) => {
                 let g = Rc::new(g);
-                self.grammars.borrow_mut().insert(
-                    lang.to_owned(),
-                    Rc::clone(&g),
-                );
+                self.grammars
+                    .borrow_mut()
+                    .insert(lang.to_owned(), Rc::clone(&g));
                 g
             }
             Err(e) => panic!("{}", e),

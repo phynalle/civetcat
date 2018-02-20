@@ -1,4 +1,4 @@
-use _generated::{Theme, _load_theme};
+use _generated::{_load_theme, Theme};
 use style::StyleTree;
 
 pub fn default() -> Theme {

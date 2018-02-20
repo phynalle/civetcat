@@ -133,11 +133,9 @@ impl Node {
             }
             self.children.insert(keys[0].to_string(), Node::new(value));
         } else {
-            let node = self.children.entry(keys[0].to_string()).or_insert_with(
-                || {
-                    Node::new(Style::empty())
-                },
-            );
+            let node = self.children
+                .entry(keys[0].to_string())
+                .or_insert_with(|| Node::new(Style::empty()));
             (*node).insert(&keys[1..], value);
         }
     }

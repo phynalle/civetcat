@@ -105,7 +105,6 @@ impl Tokenizer {
         }
     }
 
-
     fn best_match<'b>(&mut self, text: StrPiece<'b>) -> BestMatchResult {
         let state = self.state.top();
         let pattern_match = state
@@ -456,13 +455,12 @@ mod tests {
                 }
             }"#;
         let texts = vec!["(,)", "( x , y )"];
-        let expects =
-            vec![
-                tokens!(0, 1, "pair", "open"; 1, 2, "pair", "delim"; 2, 3, "pair", "close"),
-                tokens!(0, 1, "pair", "open"; 1, 2, "pair"; 2, 3, "pair", "word.first";
+        let expects = vec![
+            tokens!(0, 1, "pair", "open"; 1, 2, "pair", "delim"; 2, 3, "pair", "close"),
+            tokens!(0, 1, "pair", "open"; 1, 2, "pair"; 2, 3, "pair", "word.first";
                     3, 4, "pair"; 4, 5, "pair", "delim"; 5, 6, "pair"; 6, 7, "pair", "word.second";
                     7, 8, "pair"; 8, 9, "pair", "close"),
-            ];
+        ];
 
         for (text, expect) in texts.into_iter().zip(expects) {
             tokenize_eq!(rule_def, text, expect)
@@ -499,9 +497,8 @@ mod tests {
             "#END_BLOCK"
         );
 
-        let re = Regex::new(
-            "LOCATION:\\s*([\\w\\d]+)\\s*,\\s*([\\w\\d]+)\\s*,\\s*([\\w\\d]+)\\s*;",
-        );
+        let re =
+            Regex::new("LOCATION:\\s*([\\w\\d]+)\\s*,\\s*([\\w\\d]+)\\s*,\\s*([\\w\\d]+)\\s*;");
         let s = StrPiece::new("LOCATION: Jeju, Ulsan, Seoul;");
         assert_eq!(
             &replace_backref(

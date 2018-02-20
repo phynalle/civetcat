@@ -1,7 +1,7 @@
 use std;
 use std::borrow::Cow;
 use std::fs::File;
-use std::io::{Result, BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Read, Result, Write};
 use std::path::Path;
 
 use atty;
@@ -194,9 +194,9 @@ fn get_exe_name() -> String {
     std::env::current_exe()
         .ok()
         .and_then(|p| {
-            p.file_name().and_then(|s| s.to_str()).map(
-                |s| s.to_string(),
-            )
+            p.file_name()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
         })
         .unwrap_or_else(|| EXECUTABLE_NAME.to_owned())
 }

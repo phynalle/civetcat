@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
-use syntax::raw_rule::{RawRule, RawCapture};
+use syntax::raw_rule::{RawCapture, RawRule};
 use syntax::loader::Loader;
 use lazy::Lazy;
 
@@ -29,7 +29,9 @@ pub struct Rule {
 
 impl Rule {
     pub fn new() -> Rule {
-        Rule { inner: Rc::new(Lazy::new()) }
+        Rule {
+            inner: Rc::new(Lazy::new()),
+        }
     }
 
     pub fn assign(&self, rule: Inner) {
@@ -64,7 +66,9 @@ impl Rule {
     }
 
     pub fn downgrade(&self) -> WeakRule {
-        WeakRule { inner: Rc::downgrade(&self.inner) }
+        WeakRule {
+            inner: Rc::downgrade(&self.inner),
+        }
     }
 
     fn find_match<'a>(&self, text: StrPiece<'a>, match_results: &mut Vec<MatchResult>) {
@@ -281,7 +285,6 @@ impl GrammarBuilder {
             return RefWrapper::new(rule_ref);
         }
 
-
         let rule = self.loader.load(source).unwrap();
         let rule_ref = self.sources.entry(source.to_owned()).or_insert(rule);
         RefWrapper::new(rule_ref)
@@ -414,13 +417,11 @@ impl GrammarBuilder {
         let mut h = HashMap::new();
         if let Some(ref captures) = *captures {
             match *captures {
-                RawCapture::Map(ref map) => {
-                    for (k, v) in map {
-                        let r = self.compile_rule(v, ctx).downgrade();
-                        let n = k.parse::<usize>().unwrap();
-                        h.insert(n, r);
-                    }
-                }
+                RawCapture::Map(ref map) => for (k, v) in map {
+                    let r = self.compile_rule(v, ctx).downgrade();
+                    let n = k.parse::<usize>().unwrap();
+                    h.insert(n, r);
+                },
                 RawCapture::List(ref list) => {
                     let r = self.compile_rule(&list[0], ctx).downgrade();
                     h.insert(0, r);
@@ -455,9 +456,9 @@ impl Context {
 
     fn search_pattern(&self, pat: &str) -> &RawRule {
         for rule in &self.st {
-            let repo = rule.repository.as_ref().expect(
-                "broken format: repository not found",
-            );
+            let repo = rule.repository
+                .as_ref()
+                .expect("broken format: repository not found");
 
             if let Some(found) = repo.get(pat) {
                 return found;

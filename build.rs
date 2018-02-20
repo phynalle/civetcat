@@ -1,13 +1,12 @@
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 extern crate serde_json;
-
 
 #[path = "src/syntax/raw_rule.rs"]
 mod raw_rule;
 
-use std::io::{Read, Write, Result};
+use std::io::{Read, Result, Write};
 use std::fs::File;
 
 use raw_rule::test;
@@ -114,8 +113,7 @@ fn main() {
         for e in lang.file_types {
             ext.push_str(&format!(
                 "        m.insert(\"{}\", \"{}\");\n",
-                e,
-                lang.scope_name
+                e, lang.scope_name
             ));
         }
         langs.push_str(&format!("       v.push(\"{}\".to_owned());\n", lang.name));
@@ -132,7 +130,10 @@ fn main() {
         theme_def.push_str(&format!("    {},\n", theme.name));
         lt.push_str(&format!("        Theme::{} => {}(),\n", theme.name, _fn));
         func.push_str(&format!("{}\n", gen_load_theme_func(&theme.name)));
-        themes.push_str(&format!("       v.push((\"{}\".to_owned(), Theme::{}));\n", theme.name, theme.name));
+        themes.push_str(&format!(
+            "       v.push((\"{}\".to_owned(), Theme::{}));\n",
+            theme.name, theme.name
+        ));
     }
 
     let mut f = File::create("src/_generated.rs").unwrap();

@@ -7,7 +7,9 @@ pub struct Lazy<T> {
 
 impl<T> Lazy<T> {
     pub fn new() -> Lazy<T> {
-        Lazy { val: UnsafeCell::new(None) }
+        Lazy {
+            val: UnsafeCell::new(None),
+        }
     }
 
     pub fn init(&self, new_val: T) {

@@ -1,4 +1,4 @@
-use onig::{self, RegexOptions, Syntax, Region, SearchOptions};
+use onig::{self, RegexOptions, Region, SearchOptions, Syntax};
 use syntax::str_piece::StrPiece;
 
 pub struct Regex {
@@ -30,9 +30,9 @@ impl Regex {
             .map(|_| {
                 let captures = (0..region.len())
                     .map(|pos| {
-                        region.pos(pos).map(
-                            |(start, end)| (start + offset, end + offset),
-                        )
+                        region
+                            .pos(pos)
+                            .map(|(start, end)| (start + offset, end + offset))
                     })
                     .collect();
                 MatchResult { captures }

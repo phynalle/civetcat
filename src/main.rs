@@ -1,16 +1,16 @@
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
 
-#[macro_use]
-extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
-extern crate onig;
-#[macro_use]
-extern crate lazy_static;
+extern crate atty;
 #[macro_use]
 extern crate clap;
-extern crate atty;
+#[macro_use]
+extern crate lazy_static;
+extern crate onig;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 mod lazy;
 mod lang;
