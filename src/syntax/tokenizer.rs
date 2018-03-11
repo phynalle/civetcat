@@ -223,7 +223,7 @@ impl State {
             rule: rule.clone(),
             expr: expr.map(|s| Regex::new(&s)),
         });
-        self.scopes.push(vec![rule.name()]);
+        self.scopes.push(vec![rule.name().map(String::from)]);
     }
 
     fn push_scope(&mut self, scope: Option<String>) {
@@ -246,11 +246,6 @@ impl State {
             .flat_map(|v| v.iter())
             .filter_map(|s| s.clone())
             .collect()
-    }
-
-    #[allow(dead_code)]
-    fn depth(&self) -> usize {
-        self.st.len()
     }
 }
 

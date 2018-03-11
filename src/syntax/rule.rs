@@ -46,12 +46,12 @@ impl Rule {
         }
     }
 
-    pub fn name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<&str> {
         match **self.inner {
-            Inner::Include(ref r) => r.name.clone(),
-            Inner::Match(ref r) => r.name.clone(),
-            Inner::BeginEnd(ref r) => r.name.clone(),
-            Inner::BeginWhile(ref r) => r.name.clone(),
+            Inner::Include(ref r) => r.name.as_ref().map(|s| &**s),
+            Inner::Match(ref r) => r.name.as_ref().map(|s| &**s),
+            Inner::BeginEnd(ref r) => r.name.as_ref().map(|s| &**s),
+            Inner::BeginWhile(ref r) => r.name.as_ref().map(|s| &**s),
         }
     }
 
