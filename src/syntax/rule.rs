@@ -1,10 +1,9 @@
 use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::Deref;
 use syntax::regex::{self, Regex};
 use syntax::str_piece::StrPiece;
-use syntax::raw_rule::{RawCapture, RawRule};
+use syntax::raw_rule::{RawCapture, RawRule, RawRuleRef, WeakRawRuleRef};
 use syntax::loader::Loader;
 use lazy::Lazy;
 
@@ -220,32 +219,6 @@ pub struct BeginWhileRule {
 
 pub struct CaptureGroup(pub HashMap<usize, WeakRule>);
 
-// ! Using RefWrapper reduces safy of the program because it has a possibility that violates
-// the rules on lifetimes of references
-struct RefWrapper<T>(*const T);
-
-impl<T> Clone for RefWrapper<T> {
-    fn clone(&self) -> RefWrapper<T> {
-        RefWrapper(self.0)
-    }
-}
-
-impl<T> Copy for RefWrapper<T> {}
-
-impl<T> Deref for RefWrapper<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.0 }
-    }
-}
-
-impl<T> RefWrapper<T> {
-    fn new(reference: &T) -> RefWrapper<T> {
-        RefWrapper(reference as *const T)
-    }
-}
-
 pub struct Grammar {
     root_id: RuleId,
     rules: Vec<Rule>,
@@ -264,9 +237,9 @@ impl Grammar {
 pub struct GrammarBuilder {
     next_id: RuleId,
     loader: Box<Loader>,
-    sources: HashMap<String, RawRule>,
+    sources: HashMap<String, RawRuleRef>,
     rules: HashMap<usize, Rule>,
-    src_rule: RawRule,
+    src_rule: RawRuleRef,
 }
 
 impl GrammarBuilder {
@@ -276,24 +249,26 @@ impl GrammarBuilder {
             loader: loader,
             sources: HashMap::new(),
             rules: HashMap::new(),
-            src_rule: rule,
+            src_rule: RawRuleRef::new(rule),
         }
     }
 
-    fn get_source(&mut self, source: &str) -> RefWrapper<RawRule> {
-        if let Some(rule_ref) = self.sources.get(source) {
-            return RefWrapper::new(rule_ref);
+    fn get_source(&mut self, source: &str) -> RawRuleRef {
+        if let Some(src) = self.sources.get(source) {
+            return src.clone();
         }
 
-        let rule = self.loader.load(source).unwrap();
-        let rule_ref = self.sources.entry(source.to_owned()).or_insert(rule);
-        RefWrapper::new(rule_ref)
+        let raw = self.loader.load(source).unwrap();
+        let src = self.sources
+            .entry(source.to_owned())
+            .or_insert(RawRuleRef::new(raw));
+        src.clone()
     }
 
     pub fn build(&mut self) -> Grammar {
-        let raw = RefWrapper::new(&self.src_rule);
-        let ctx = Context::new(raw, raw);
-        let root = self.compile_rule(&*raw, &ctx);
+        let src = self.src_rule.clone();
+        let ctx = Context::new(src.to_weak(), src.to_weak());
+        let root = self.compile_rule(src, &ctx);
 
         Grammar {
             rules: (0..self.next_id).map(|i| self.rules[&i].clone()).collect(),
@@ -301,7 +276,7 @@ impl GrammarBuilder {
         }
     }
 
-    fn create_rule(&mut self, rule_id: RuleId, rule: &RawRule, ctx: &Context) -> Inner {
+    fn create_rule(&mut self, rule_id: RuleId, rule: RawRuleRef, ctx: &Context) -> Inner {
         if rule.match_expr.is_some() {
             Inner::Match(MatchRule {
                 id: rule_id,
@@ -318,7 +293,7 @@ impl GrammarBuilder {
 
             let patterns = if rule.repository.is_some() {
                 let mut ctx = ctx.clone();
-                ctx.st.push(RefWrapper::new(rule));
+                ctx.st.push(rule.to_weak());
                 self.compile_patterns(&rule.patterns, &ctx)
             } else {
                 self.compile_patterns(&rule.patterns, ctx)
@@ -351,7 +326,7 @@ impl GrammarBuilder {
             })
         }
     }
-    fn compile_rule(&mut self, raw: &RawRule, ctx: &Context) -> Rule {
+    fn compile_rule(&mut self, raw: RawRuleRef, ctx: &Context) -> Rule {
         match raw.id.get() {
             Some(rule_id) => self.rules[&rule_id].clone(),
             None => {
@@ -368,36 +343,39 @@ impl GrammarBuilder {
 
     fn compile_patterns(
         &mut self,
-        patterns: &Option<Vec<RawRule>>,
+        patterns: &Option<Vec<RawRuleRef>>,
         ctx: &Context,
     ) -> Vec<WeakRule> {
         let mut compiled_patterns = Vec::new();
         if let Some(ref patterns) = *patterns {
             for pattern in patterns {
                 let rule = match pattern.include {
-                    None => self.compile_rule(pattern, ctx),
-                    Some(ref inc) if inc.starts_with('#') => {
-                        self.compile_rule(ctx.search_pattern(&inc[1..]), ctx)
-                    }
-
+                    None => self.compile_rule(pattern.clone(), ctx),
                     Some(ref inc) if inc == "$base" => {
-                        self.rules[ctx.base.id.get().as_ref().unwrap()].clone()
+                        let base = ctx.base.upgrade().unwrap();
+                        self.rules[base.id.get().as_ref().unwrap()].clone()
                     }
                     Some(ref inc) if inc == "$self" => {
-                        self.rules[ctx._self.id.get().as_ref().unwrap()].clone()
+                        let _self = ctx._self.upgrade().unwrap();
+                        self.rules[_self.id.get().as_ref().unwrap()].clone()
                     }
                     Some(ref inc) if inc.contains('#') => {
-                        let external_sources: Vec<_> = inc.splitn(2, '#').collect();
-                        let source = external_sources[0];
-                        let pat = external_sources[1];
-                        let new_root = self.get_source(source);
-                        let ctx = Context::new(ctx._self, new_root);
-                        self.compile_rule(ctx.search_pattern(pat), &ctx)
+                        let reference_sources: Vec<_> = inc.splitn(2, '#').collect();
+                        let source = reference_sources[0];
+                        let pat = reference_sources[1];
+
+                        if source.is_empty() {
+                            self.compile_reference(pat, ctx)
+                        } else {
+                            let new_root = self.get_source(source);
+                            let ctx = Context::new(ctx._self.clone(), new_root.to_weak());
+                            self.compile_reference(pat, &ctx)
+                        }
                     }
                     Some(ref inc) => {
                         let new_root = self.get_source(inc);
-                        let ctx = Context::new(ctx._self, new_root);
-                        self.compile_rule(&*ctx._self, &ctx)
+                        let ctx = Context::new(ctx._self.clone(), new_root.to_weak());
+                        self.compile_rule(ctx._self.upgrade().unwrap(), &ctx)
                     }
                 };
                 compiled_patterns.push(rule.downgrade());
@@ -406,17 +384,24 @@ impl GrammarBuilder {
         compiled_patterns
     }
 
+    fn compile_reference(&mut self, name: &str, ctx: &Context) -> Rule {
+        self.compile_rule(ctx.search_pattern(name), &ctx)
+    }
+
     fn compile_captures(&mut self, captures: &Option<RawCapture>, ctx: &Context) -> CaptureGroup {
         let mut h = HashMap::new();
         if let Some(ref captures) = *captures {
             match *captures {
                 RawCapture::Map(ref map) => for (k, v) in map {
-                    let r = self.compile_rule(v, ctx).downgrade();
+                    let r = self.compile_rule(v.clone(), ctx).downgrade();
                     let n = k.parse::<usize>().unwrap();
                     h.insert(n, r);
                 },
                 RawCapture::List(ref list) => {
-                    let r = self.compile_rule(&list[0], ctx).downgrade();
+                    if list.is_empty() {
+                        panic!("Empty capture list")
+                    }
+                    let r = self.compile_rule((&list[0]).clone(), ctx).downgrade();
                     h.insert(0, r);
                 }
             }
@@ -433,28 +418,28 @@ impl GrammarBuilder {
 
 #[derive(Clone)]
 struct Context {
-    _self: RefWrapper<RawRule>,
-    base: RefWrapper<RawRule>,
-    st: Vec<RefWrapper<RawRule>>,
+    base: WeakRawRuleRef,
+    _self: WeakRawRuleRef,
+    st: Vec<WeakRawRuleRef>,
 }
 
 impl Context {
-    fn new(base: RefWrapper<RawRule>, _self: RefWrapper<RawRule>) -> Context {
+    fn new(base: WeakRawRuleRef, _self: WeakRawRuleRef) -> Context {
         Context {
             base: base,
-            _self: _self,
+            _self: _self.clone(),
             st: vec![_self],
         }
     }
 
-    fn search_pattern(&self, pat: &str) -> &RawRule {
-        for rule in &self.st {
+    fn search_pattern(&self, pat: &str) -> RawRuleRef {
+        for rule in self.st.iter().map(|r| r.upgrade().unwrap()) {
             let repo = rule.repository
                 .as_ref()
                 .expect("broken format: repository not found");
 
             if let Some(found) = repo.get(pat) {
-                return found;
+                return found.clone();
             }
         }
         panic!("pattern \"{}\" not found in the repository", pat);

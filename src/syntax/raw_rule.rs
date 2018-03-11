@@ -1,12 +1,56 @@
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::ops::Deref;
+use std::rc::{Rc, Weak};
+use std::result::Result;
+
+use serde::{Deserialize, Deserializer};
 use serde_json;
+
+#[derive(Debug, Clone)]
+pub struct RawRuleRef(Rc<RawRule>);
+
+impl RawRuleRef {
+    pub fn new(rule: RawRule) -> RawRuleRef {
+        RawRuleRef(Rc::new(rule))
+    }
+
+    pub fn to_weak(&self) -> WeakRawRuleRef {
+        WeakRawRuleRef(Rc::downgrade(&self.0))
+    }
+}
+
+impl Deref for RawRuleRef {
+    type Target = RawRule;
+
+    fn deref(&self) -> &RawRule {
+        self.0.as_ref()
+    }
+}
+
+impl<'de> Deserialize<'de> for RawRuleRef {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        RawRule::deserialize(deserializer).map(RawRuleRef::new)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WeakRawRuleRef(Weak<RawRule>);
+
+impl WeakRawRuleRef {
+    pub fn upgrade(&self) -> Option<RawRuleRef> {
+        self.0.upgrade().map(RawRuleRef)
+    }
+}
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum RawCapture {
-    Map(HashMap<String, RawRule>),
-    List(Vec<RawRule>),
+    Map(HashMap<String, RawRuleRef>),
+    List(Vec<RawRuleRef>),
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -26,8 +70,8 @@ pub struct RawRule {
     pub end_captures: Option<RawCapture>,
     #[serde(rename = "while")]
     pub while_expr: Option<String>,
-    pub patterns: Option<Vec<RawRule>>,
-    pub repository: Option<HashMap<String, RawRule>>,
+    pub patterns: Option<Vec<RawRuleRef>>,
+    pub repository: Option<HashMap<String, RawRuleRef>>,
 }
 
 impl RawRule {
