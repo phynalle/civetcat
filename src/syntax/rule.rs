@@ -291,19 +291,12 @@ impl GrammarBuilder {
     }
 
     pub fn build(&mut self) -> Grammar {
-        let root = {
-            let raw = RefWrapper::new(&self.src_rule);
-            let ctx = Context::new(raw, raw);
-            self.compile_rule(&*raw, &ctx)
-        };
-
-        let mut rules = Vec::new();
-        for i in 0..self.next_id {
-            rules.push(self.rules[&i].clone());
-        }
+        let raw = RefWrapper::new(&self.src_rule);
+        let ctx = Context::new(raw, raw);
+        let root = self.compile_rule(&*raw, &ctx);
 
         Grammar {
-            rules,
+            rules: (0..self.next_id).map(|i| self.rules[&i].clone()).collect(),
             root_id: root.id(),
         }
     }
