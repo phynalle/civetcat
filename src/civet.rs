@@ -1,7 +1,7 @@
-use std;
+use std::{self, result};
 use std::borrow::Cow;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Result, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 
 use atty;
@@ -10,25 +10,38 @@ use app;
 use colorizer::LineColorizer;
 use lang;
 use theme;
+use error::Error;
 use _generated;
+
+type Result<T> = result::Result<T, Error>;
 
 static EXECUTABLE_NAME: &'static str = "cv";
 
 pub struct Civet {
     ll: lang::LangLoader,
     args: Arguments,
+    supported: Supported,
 }
 
 impl Civet {
     pub fn new() -> Civet {
+        let supported = Supported::new();
+        let args = parse_arguments(&supported);
+
         Civet {
             ll: lang::LangLoader::new(),
-            args: parse_arguments(),
+            args,
+            supported,
         }
     }
 
     pub fn run(self) {
         let stdout = std::io::stdout();
+        if self.args.options.print_supported {
+            self.supported.print();
+            std::process::exit(0);
+        }
+
         for file_name in &self.args.file_names {
             let mut w = Writer::new(stdout.lock(), &self.args.options);
             if file_name == "-" {
@@ -77,7 +90,7 @@ impl<'a, W: Write> Writer<'a, W> {
     }
 
     fn copy<R: Read>(&mut self, r: R) -> Result<()> {
-        self.write(r, |s| Cow::Borrowed(s))
+        self.write(r, |s| Cow::Borrowed(s)).map_err(|e| e.into())
     }
 
     fn write<R, F>(&mut self, r: R, mut f: F) -> Result<()>
@@ -113,7 +126,7 @@ impl<'a, W: Write> Writer<'a, W> {
             }
             self.inner.write_fmt(format_args!("{}", f(&line))).unwrap();
         }
-        self.inner.flush()
+        self.inner.flush().map_err(|e| e.into())
     }
 }
 
@@ -122,7 +135,7 @@ struct Arguments {
     file_names: Vec<String>,
 }
 
-fn parse_arguments() -> Arguments {
+fn parse_arguments(supported: &Supported) -> Arguments {
     let matches = app::initialize().get_matches();
 
     let mut options = Options {
@@ -130,6 +143,8 @@ fn parse_arguments() -> Arguments {
         number_nonblack: matches.occurrences_of("number-nonblank") > 0,
         squeeze_blank: matches.occurrences_of("squeeze-blank") > 0,
         raw_control_chars: matches.occurrences_of("raw-control-chars") > 0,
+        print_supported: matches.occurrences_of("supported") > 0,
+
         theme: theme::default(),
     };
 
@@ -137,29 +152,15 @@ fn parse_arguments() -> Arguments {
     options.display_number |= matches.occurrences_of("number-nonblank") > 0;
     options.raw_control_chars |= atty::is(atty::Stream::Stdout);
 
-    if let Some(theme_name) = matches.value_of("theme") {
-        let themes = _generated::themes().to_vec();
-        if theme_name == "list" {
-            println!("Supported Themes");
-            for (name, _) in themes {
-                println!(" * {}", name);
-            }
-            std::process::exit(0);
-        }
-
-        let theme = {
-            let theme_name = theme_name.to_lowercase();
-            themes
-                .into_iter()
-                .find(|&(ref name, _)| name.to_lowercase() == theme_name)
-                .map(|(_, th)| th)
-        };
-
-        match theme {
-            Some(th) => options.theme = th,
-            None => {
-                println!("Unsupported Theme: {}", theme_name);
-                std::process::exit(1);
+    if !options.print_supported {
+        if let Some(theme_name) = matches.value_of("theme") {
+            match supported.find_theme(&theme_name) {
+                Ok(th) => options.theme = th,
+                Err(e) => {
+                    print_error(&format!("{}: {}", e, theme_name));
+                    supported.print();
+                    std::process::exit(1);
+                }
             }
         }
     }
@@ -168,7 +169,6 @@ fn parse_arguments() -> Arguments {
         .values_of("file")
         .map(|values| values.map(|v| v.to_owned()).collect::<Vec<_>>())
         .unwrap_or_else(|| vec!["-".to_owned()]);
-
     Arguments {
         options,
         file_names,
@@ -181,6 +181,7 @@ struct Options {
     number_nonblack: bool,
     squeeze_blank: bool,
     raw_control_chars: bool,
+    print_supported: bool,
     theme: _generated::Theme,
 }
 
@@ -199,4 +200,32 @@ fn get_exe_name() -> String {
                 .map(|s| s.to_string())
         })
         .unwrap_or_else(|| EXECUTABLE_NAME.to_owned())
+}
+
+struct Supported {
+    themes: Vec<(String, _generated::Theme)>,
+}
+
+impl Supported {
+    pub fn new() -> Supported {
+        Supported {
+            themes: _generated::themes().to_vec(),
+        }
+    }
+
+    pub fn find_theme(&self, name: &str) -> Result<_generated::Theme> {
+        let name = name.to_lowercase();
+        self.themes
+            .iter()
+            .find(|&&(ref n, _)| name == n.to_lowercase())
+            .map(|&(_, th)| th)
+            .ok_or(Error::UnsupportedTheme)
+    }
+
+    pub fn print(&self) {
+        println!("Supported Themes");
+        for &(ref name, _) in &self.themes {
+            println!(" * {}", name);
+        }
+    }
 }

@@ -20,6 +20,7 @@ mod syntax;
 mod style;
 mod colorizer;
 mod civet;
+mod error;
 mod _generated;
 
 use civet::Civet;

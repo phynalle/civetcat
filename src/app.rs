@@ -34,5 +34,11 @@ pub fn initialize() -> App<'static, 'static> {
                 .short("t")
                 .help("change color styles"),
         )
+        .arg(
+            Arg::with_name("supported")
+                .short("v")
+                .long("supported")
+                .help("print supported languages and themes"),
+        )
         .arg(Arg::with_name("file").multiple(true))
 }
