@@ -51,6 +51,9 @@ impl Tokenizer {
         while let Some(pos) = self.tokenize_next(text) {
             let offset = text.start();
             text.remove_prefix(pos - offset);
+            if text.is_empty() {
+                break;
+            }
         }
     }
 
@@ -204,6 +207,7 @@ impl RuleState {
             scopes,
         }
     }
+
     fn match_expr<'a>(&self, text: StrPiece<'a>) -> Option<regex::MatchResult> {
         self.expr.as_ref().and_then(|expr| expr.find(text))
     }
@@ -213,7 +217,7 @@ struct State(Vec<RuleState>);
 
 impl State {
     fn new() -> State {
-        State (Vec::new())
+        State(Vec::new())
     }
 
     fn top(&self) -> &RuleState {
@@ -244,7 +248,8 @@ impl State {
     }
 
     fn all_scopes(&self) -> Vec<String> {
-        self.0.iter()
+        self.0
+            .iter()
             .flat_map(|v| v.scopes.iter())
             .filter_map(|s| s.clone())
             .collect()
@@ -479,9 +484,9 @@ mod tests {
                     "3":{ "name":"punctuation" }
                 }
             }"#,
-            "[  table  ]",
-            tokens!(0, 1, "table", "punctuation"; 1, 3, "table"; 3, 8, "table", "name";
-                    8, 10, "table"; 10, 11, "table", "punctuation")
+            "[table]\n",
+            tokens!(0, 1, "table", "punctuation"; 1, 6, "table", "name";
+                    6, 7, "table", "punctuation"; 7, 8, )
         );
     }
 
