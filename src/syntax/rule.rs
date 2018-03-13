@@ -64,7 +64,7 @@ impl Rule {
         }
     }
 
-    pub fn downgrade(&self) -> WeakRule {
+    pub fn to_weak(&self) -> WeakRule {
         WeakRule {
             inner: Rc::downgrade(&self.inner),
         }
@@ -378,7 +378,7 @@ impl GrammarBuilder {
                         self.compile_rule(ctx._self.upgrade().unwrap(), &ctx)
                     }
                 };
-                compiled_patterns.push(rule.downgrade());
+                compiled_patterns.push(rule.to_weak());
             }
         }
         compiled_patterns
@@ -393,7 +393,7 @@ impl GrammarBuilder {
         if let Some(ref captures) = *captures {
             match *captures {
                 RawCapture::Map(ref map) => for (k, v) in map {
-                    let r = self.compile_rule(v.clone(), ctx).downgrade();
+                    let r = self.compile_rule(v.clone(), ctx).to_weak();
                     let n = k.parse::<usize>().unwrap();
                     h.insert(n, r);
                 },
@@ -401,7 +401,7 @@ impl GrammarBuilder {
                     if list.is_empty() {
                         panic!("Empty capture list")
                     }
-                    let r = self.compile_rule((&list[0]).clone(), ctx).downgrade();
+                    let r = self.compile_rule((&list[0]).clone(), ctx).to_weak();
                     h.insert(0, r);
                 }
             }
