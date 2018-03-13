@@ -19,14 +19,16 @@ impl Regex {
         let mut region = Region::new();
 
         self.re
-            .search_with_options(text.full_text(), offset, text.end(), options, Some(&mut region))
+            .search_with_options(
+                text.full_text(),
+                offset,
+                text.end(),
+                options,
+                Some(&mut region),
+            )
             .map(|_| {
                 let captures = (0..region.len())
-                    .map(|pos| {
-                        region
-                            .pos(pos)
-                            .map(|(start, end)| (start, end))
-                    })
+                    .map(|pos| region.pos(pos).map(|(start, end)| (start, end)))
                     .collect();
                 MatchResult { captures }
             })
