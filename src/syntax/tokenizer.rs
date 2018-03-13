@@ -74,7 +74,7 @@ impl Tokenizer {
                     self.process_capture(text, &m.caps.captures, &r.begin_captures);
                     self.generate_token(pos.1);
 
-                    self.state.push_scope(r.content_name.clone());
+                    self.state.append_scope(r.content_name.clone());
                 });
                 rule.do_beginwhile(|r| {
                     let s = replace_backref(r.while_expr.clone(), text, &m.caps);
@@ -90,7 +90,7 @@ impl Tokenizer {
                 {
                     let rule = self.state.top().rule.clone();
                     rule.do_beginend(|r| {
-                        self.state.pop_addition_scope();
+                        self.state.remove_additional_scopes();
                         self.process_capture(text, &m.captures, &r.end_captures);
                     });
                 }
@@ -192,58 +192,60 @@ impl Tokenizer {
 struct RuleState {
     rule: Rule,
     expr: Option<Regex>,
+    scopes: Vec<Option<String>>,
 }
 
 impl RuleState {
+    fn new(rule: Rule, expr: Option<String>) -> RuleState {
+        let scopes = vec![rule.name().map(String::from)];
+        RuleState {
+            rule,
+            expr: expr.map(|s| Regex::new(&s)),
+            scopes,
+        }
+    }
     fn match_expr<'a>(&self, text: StrPiece<'a>) -> Option<regex::MatchResult> {
         self.expr.as_ref().and_then(|expr| expr.find(text))
     }
 }
 
-struct State {
-    st: Vec<RuleState>,
-    scopes: Vec<Vec<Option<String>>>,
-}
+struct State(Vec<RuleState>);
 
 impl State {
     fn new() -> State {
-        State {
-            st: Vec::new(),
-            scopes: Vec::new(),
-        }
+        State (Vec::new())
     }
 
     fn top(&self) -> &RuleState {
-        assert!(!self.st.is_empty());
-        self.st.iter().rev().nth(0).unwrap()
+        assert!(!self.0.is_empty());
+        self.0.iter().rev().nth(0).unwrap()
+    }
+
+    fn top_mut(&mut self) -> &mut RuleState {
+        assert!(!self.0.is_empty());
+        self.0.iter_mut().rev().nth(0).unwrap()
     }
 
     fn push(&mut self, rule: &Rule, expr: Option<String>) {
-        self.st.push(RuleState {
-            rule: rule.clone(),
-            expr: expr.map(|s| Regex::new(&s)),
-        });
-        self.scopes.push(vec![rule.name().map(String::from)]);
+        self.0.push(RuleState::new(rule.clone(), expr));
     }
 
-    fn push_scope(&mut self, scope: Option<String>) {
-        self.scopes.iter_mut().rev().nth(0).unwrap().push(scope)
+    fn append_scope(&mut self, scope: Option<String>) {
+        self.top_mut().scopes.push(scope);
     }
 
-    fn pop_addition_scope(&mut self) {
-        self.scopes.iter_mut().rev().nth(0).unwrap().drain(1..);
+    fn remove_additional_scopes(&mut self) {
+        self.top_mut().scopes.drain(1..);
     }
 
     fn pop(&mut self) {
-        assert!(!self.st.is_empty());
-        self.st.pop();
-        self.scopes.pop();
+        assert!(!self.0.is_empty());
+        self.0.pop();
     }
 
-    fn scopes(&self) -> Vec<String> {
-        self.scopes
-            .iter()
-            .flat_map(|v| v.iter())
+    fn all_scopes(&self) -> Vec<String> {
+        self.0.iter()
+            .flat_map(|v| v.scopes.iter())
             .filter_map(|s| s.clone())
             .collect()
     }
@@ -276,7 +278,7 @@ impl TokenGenerator {
         Token {
             start,
             end,
-            scopes: state.scopes(),
+            scopes: state.all_scopes(),
         }
     }
 
